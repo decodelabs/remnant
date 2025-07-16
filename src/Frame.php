@@ -79,7 +79,7 @@ class Frame implements JsonSerializable
 
                 $classRef = new ReflectionClass($className);
 
-                if(!$classRef->hasMethod($this->function)) {
+                if (!$classRef->hasMethod($this->function)) {
                     return null;
                 }
 
