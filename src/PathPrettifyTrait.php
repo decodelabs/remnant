@@ -17,7 +17,7 @@ trait PathPrettifyTrait
         string $path
     ): string {
         if (class_exists(Monarch::class)) {
-            return Monarch::$paths->prettify($path);
+            return Monarch::getPaths()->prettify($path);
         }
 
         return $path;
