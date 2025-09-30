@@ -15,6 +15,8 @@ Remnant provides a simple way to generate more user-friendly stack traces in PHP
 
 ## Installation
 
+This package requires PHP 8.4 or higher.
+
 Install via Composer:
 
 ```bash
