@@ -28,25 +28,76 @@ composer require decodelabs/remnant
 Create a trace in the current context or from an Exception:
 
 ```php
+use DecodeLabs\Remnant\Anchor\Rewind;
+use DecodeLabs\Remnant\Anchor\FunctionIdentifier;
+use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod;
 use DecodeLabs\Remnant\Trace;
 
 $trace = Trace::create();
 $exceptionTrace = Trace::fromException($exception);
 
-// Pass an integer to either method to rewind the trace by that many frames
-$trace = Trace::create(2);
-$exceptionTrace = Trace::fromException($exception, 2);
+// Pass a rewind anchor to either method to rewind the trace by that many frames
+$trace = Trace::create(new Rewind(2));
+$exceptionTrace = Trace::fromException($exception, new Rewind(2));
+
+// Pass a FunctionIdentifier anchor to rewind back to the last instance of the function
+$trace = Trace::create(
+    new FunctionIdentifier(
+        new ObjectMethod(MyClass::class, 'myFunction')
+    )
+);
 ```
 
-Access frames from the trace using standard array methods:
+Access frames from the trace using standard array and iterator methods - frames are indexed in order from `0` just like the array returned by `debug_backtrace()`. Negative and out of range indexes return null:
 
 ```php
 foreach ($trace as $frame) {
-    echo $frame->file . ':' . $frame->line . ' - ' . $frame->function . PHP_EOL;
+    echo $frame->location . ' - ' . $frame->function . PHP_EOL;
 }
 
 $frame = $trace[0]; // Get the first frame
 echo (string)$frame; // Convert frame to string for a formatted output
+```
+
+### Rendering
+
+Render a trace to a string - you can provide an optional `ViewOptions` object to customize the output.
+
+Provide a list of `Filter` implementations to filter the frames before rendering.
+
+Use the `ArgumentFormat` enum to control how arguments are rendered - `Count` (default), `InlineValues` or `NamedValues`.
+
+```php
+use DecodeLabs\Remnant\Filter\Paths as PathsFilter;
+use DecodeLabs\Remnant\Filter\Vendor as VendorFilter;
+use DecodeLabs\Remnant\Filter\FunctionIdentifier as FunctionIdentifierFilter;
+use DecodeLabs\Remnant\Filter\ClassIdentifier as ClassIdentifierFilter;
+use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod as ObjectMethodFunctionIdentifier;
+use DecodeLabs\Remnant\ClassIdentifier\Native as NativeClassIdentifier;
+use DecodeLabs\Remnant\ViewOptions;
+
+$trace = Trace::create();
+
+echo $trace->render(new ViewOptions(
+    filters: [
+        // Filter by paths
+        new PathsFilter([
+            '/path/to/filter/'
+        ]),
+
+        // Filter vendor dir
+        new VendorFilter(),
+
+        // Filter by function identifier
+        new FunctionIdentifier(
+            new ObjectMethod(MyClass::class, 'myFunction')
+        ),
+
+        // Filter by class identifier
+        new ClassIdentifier(MyClass::class)
+    ],
+    argumentFormat: ArgumentFormat::NamedValues
+));
 ```
 
 ## Licensing

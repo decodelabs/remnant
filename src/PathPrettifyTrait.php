@@ -11,6 +11,8 @@ namespace DecodeLabs\Remnant;
 
 use DecodeLabs\Monarch;
 
+use function class_exists;
+
 trait PathPrettifyTrait
 {
     private static function prettifyPath(

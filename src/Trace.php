@@ -13,6 +13,7 @@ use ArrayAccess;
 use ArrayIterator;
 use BadMethodCallException;
 use Countable;
+use DecodeLabs\Remnant\Anchor\Rewind as RewindAnchor;
 use IteratorAggregate;
 use JsonSerializable;
 use OutOfBoundsException;
@@ -29,34 +30,28 @@ class Trace implements
     JsonSerializable,
     Countable
 {
-    use PathPrettifyTrait;
-
     /**
      * @var array<int,Frame>
      */
     public protected(set) array $frames = [];
 
-    public ?string $file {
-        get => $this->getFirstFrame()?->file;
-    }
-
-    public ?int $line {
-        get => $this->getFirstFrame()?->line;
+    public ?Location $location {
+        get => $this->getFirstFrame()?->location;
     }
 
     public static function fromException(
         Throwable $e,
-        int $rewind = 0
+        ?Anchor $anchor = null
     ): self {
         if ($e instanceof PreparedTraceException) {
             return $e->stackTrace;
         }
 
-        $output = self::fromArray($e->getTrace(), $rewind);
+        $output = self::fromDebugBacktrace($e->getTrace(), $anchor);
 
-        array_unshift($output->frames, new Frame([
-            'fromFile' => $e->getFile(),
-            'fromLine' => $e->getLine(),
+        array_unshift($output->frames, Frame::fromDebugBacktrace([
+            'callingFile' => $e->getFile(),
+            'callingLine' => $e->getLine(),
             'function' => '__construct',
             'class' => get_class($e),
             'type' => '->',
@@ -71,45 +66,39 @@ class Trace implements
     }
 
     public static function create(
-        int $rewind = 0
+        ?Anchor $anchor = null
     ): self {
-        return self::fromArray(debug_backtrace(), $rewind);
+        if ($anchor === null) {
+            $anchor = new RewindAnchor(1);
+        } elseif ($anchor instanceof RewindAnchor) {
+            $anchor = clone $anchor;
+            $anchor->offset += 1;
+        }
+
+        // Wrap in a closure to get extra frame for callingFile/Line
+        return self::fromDebugBacktrace(
+            (fn () => debug_backtrace())(),
+            $anchor
+        );
     }
 
     /**
      * @param array<array<string,mixed>> $trace
      */
-    public static function fromArray(
+    public static function fromDebugBacktrace(
         array $trace,
-        int $rewind = 0
+        ?Anchor $anchor = null
     ): self {
-        $last = null;
-
-        if ($rewind) {
-            if ($rewind > count($trace) - 1) {
-                throw new OutOfBoundsException(
-                    'Stack rewind out of stack frame range'
-                );
-            }
-
-            while ($rewind >= 0) {
-                $rewind--;
-                $last = array_shift($trace);
-            }
-        }
-
-        if (!$last) {
-            $last = $trace[0] ?? null;
-        }
-
-        $last['fromFile'] = $last['file'] ?? null;
-        $last['fromLine'] = $last['line'] ?? null;
+        $last = $trace[0] ?? null;
+        $last['callingFile'] = $last['file'] ?? null;
+        $last['callingLine'] = $last['line'] ?? null;
         $output = [];
+        $anchorFound = $anchor ? false : true;
 
-        foreach ($trace as $frame) {
+        foreach ($trace as $index => $frameArray) {
             // Skip Veneer proxy frames
             /** @var string $file */
-            $file = $frame['file'] ?? '';
+            $file = $frameArray['file'] ?? '';
 
             if (str_ends_with(
                 $file,
@@ -118,13 +107,29 @@ class Trace implements
                 continue;
             }
 
-            $frame['fromFile'] = $frame['file'] ?? null;
-            $frame['fromLine'] = $frame['line'] ?? null;
-            $frame['file'] = $last['fromFile'];
-            $frame['line'] = $last['fromLine'];
+            $frameArray['callingFile'] = $frameArray['file'] ?? null;
+            $frameArray['callingLine'] = $frameArray['line'] ?? null;
+            $frameArray['file'] = $last['callingFile'];
+            $frameArray['line'] = $last['callingLine'];
 
-            $output[] = new Frame($frame);
-            $last = $frame;
+            $frame = Frame::fromDebugBacktrace($frameArray);
+            $last = $frameArray;
+
+            if (!$anchorFound) {
+                if ($anchor?->accepts($index, $frame)) {
+                    $anchorFound = true;
+                } else {
+                    continue;
+                }
+            }
+
+            $output[] = $frame;
+        }
+
+        if (empty($output)) {
+            throw new OutOfBoundsException(
+                'Stack is empty'
+            );
         }
 
         return new self(...$output);
@@ -164,17 +169,6 @@ class Trace implements
         return new ArrayIterator($this->frames);
     }
 
-
-    /**
-     * @return array<array<mixed>>
-     */
-    public function toArray(): array
-    {
-        return array_map(function ($frame) {
-            return $frame->toArray();
-        }, $this->frames);
-    }
-
     /**
      * @return array<array<string, mixed>>
      */
@@ -190,22 +184,31 @@ class Trace implements
         return count($this->frames);
     }
 
-
-    public function __toString(): string
-    {
+    public function render(
+        ?ViewOptions $options = null
+    ): string {
         $output = '';
-        $count = $this->count();
+        $count = $this->count() + 1;
         $pad = strlen((string)$count);
 
         foreach ($this->frames as $frame) {
-            $frameString = $frame->buildSignature() . "\n" .
-                str_repeat(' ', $pad + 1) .
-                self::prettifyPath((string)$frame->callingFile) . ' : ' . $frame->callingLine;
+            $count--;
 
-            $output .= str_pad((string)$count--, $pad, ' ', \STR_PAD_LEFT) . ': ' . $frameString . "\n";
+            if (!$options?->filter($frame)) {
+                continue;
+            }
+
+            $frameString = $frame->render($options);
+            $output .= str_pad((string)$count, $pad, ' ', \STR_PAD_LEFT) . ': ' . $frameString . "\n";
         }
 
         return $output;
+    }
+
+
+    public function __toString(): string
+    {
+        return $this->render();
     }
 
 
@@ -246,19 +249,10 @@ class Trace implements
 
 
     /**
-     * @return array<string, mixed>
+     * @return array<int,Frame>
      */
     public function __debugInfo(): array
     {
-        $output = [];
-        $count = count($this->frames);
-
-        foreach ($this->frames as $i => $frame) {
-            $output[($count - $i) . ': ' . $frame->buildSignature(true)] = [
-                'file' => self::prettifyPath((string)$frame->callingFile) . ' : ' . $frame->callingLine
-            ];
-        }
-
-        return $output;
+        return $this->frames;
     }
 }
