@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace DecodeLabs\Remnant;
 
 use Countable;
+use DateTimeInterface;
 use Generator;
 use IteratorAggregate;
 use JsonSerializable;
@@ -132,6 +133,8 @@ class ArgumentList implements
             } else {
                 $value = '[]';
             }
+        } elseif ($value instanceof DateTimeInterface) {
+            $value = $value->format('Y-m-d H:i:s');
         } elseif (is_object($value)) {
             $class = Frame::createClassIdentifier(get_class($value), $value);
             $value = $class->render($options);
