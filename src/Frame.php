@@ -273,9 +273,9 @@ class Frame implements JsonSerializable, Stringable
     public function render(
         ?ViewOptions $options = null
     ): string {
+        $options ??= new ViewOptions();
         $output = $this->function->render($options);
         $output .= $this->arguments->render($options);
-
         $location = $this->callSite ?? $this->location;
 
         if ($location !== null) {

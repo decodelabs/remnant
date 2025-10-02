@@ -10,12 +10,15 @@ declare(strict_types=1);
 namespace DecodeLabs\Remnant\ClassIdentifier;
 
 use DecodeLabs\Remnant\ClassIdentifier;
+use DecodeLabs\Remnant\ClassIdentifierTrait;
 use DecodeLabs\Remnant\Location;
 use DecodeLabs\Remnant\ViewOptions;
 use ReflectionClass;
 
 class Anonymous implements ClassIdentifier
 {
+    use ClassIdentifierTrait;
+
     public string $name {
         get => '{anonymous}';
     }
@@ -81,10 +84,5 @@ class Anonymous implements ClassIdentifier
         }
 
         return '{anonymous:' . $this->location->getPrettyFile() . ':' . $this->location->line . '}';
-    }
-
-    public function __toString(): string
-    {
-        return $this->render();
     }
 }

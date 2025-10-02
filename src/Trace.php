@@ -177,13 +177,14 @@ class Trace implements
         ?ViewOptions $options = null
     ): string {
         $output = '';
+        $options ??= new ViewOptions();
         $count = $this->count() + 1;
         $pad = strlen((string)$count);
 
         foreach ($this->frames as $frame) {
             $count--;
 
-            if (!$options?->filter($frame)) {
+            if (!$options->filter($frame)) {
                 continue;
             }
 

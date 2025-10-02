@@ -43,7 +43,7 @@ class Location implements
 
     public function __toString(): string
     {
-        return $this->getPrettyFile() . ' : ' . $this->line;
+        return $this->getPrettyFile() . ':' . $this->line;
     }
 
     /**

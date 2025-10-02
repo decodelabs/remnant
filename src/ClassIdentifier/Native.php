@@ -10,11 +10,14 @@ declare(strict_types=1);
 namespace DecodeLabs\Remnant\ClassIdentifier;
 
 use DecodeLabs\Remnant\ClassIdentifier;
+use DecodeLabs\Remnant\ClassIdentifierTrait;
 use DecodeLabs\Remnant\ViewOptions;
 use ReflectionClass;
 
 class Native implements ClassIdentifier
 {
+    use ClassIdentifierTrait;
+
     /**
      * @var class-string<object>
      */
@@ -48,10 +51,5 @@ class Native implements ClassIdentifier
         ?ViewOptions $options = null
     ): string {
         return $this->name;
-    }
-
-    public function __toString(): string
-    {
-        return $this->render();
     }
 }

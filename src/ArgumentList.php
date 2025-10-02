@@ -47,8 +47,6 @@ class ArgumentList implements
 
                 $values[$key] = $value;
             }
-
-            //dd2($values);
         }
 
         $this->values = $values;
@@ -93,6 +91,7 @@ class ArgumentList implements
         ?ViewOptions $options = null
     ): string {
         $output = [];
+        $options ??= new ViewOptions();
 
         foreach ($this->values as $value) {
             $output[] = $this->exportValue($value, $options);
@@ -109,21 +108,29 @@ class ArgumentList implements
         }
 
         $output = [];
+        $options ??= new ViewOptions();
 
         foreach ($this->values as $key => $value) {
-            $output[] = '        ' . $key . ': ' . $this->exportValue($value, $options);
+            $output[] = '        ' . $key . ': ' . $this->exportValue($key, $value, $options);
         }
 
         return '(' . "\n" . implode("\n", $output) . "\n" . '    )';
     }
 
     protected function exportValue(
+        string|int $key,
         mixed $value,
         ?ViewOptions $options = null
     ): string {
+        $options ??= new ViewOptions();
+
+        if (in_array($key, $options->redactKeys ?? [])) {
+            return '*sensitive*';
+        }
+
         if (is_string($value)) {
-            if (strlen($value) > 16) {
-                $value = substr($value, 0, 16) . '...';
+            if (strlen($value) > $options->maxStringLength) {
+                $value = substr($value, 0, $options->maxStringLength) . '...';
             }
 
             $value = '\'' . $value . '\'';
@@ -156,17 +163,22 @@ class ArgumentList implements
      */
     public function jsonSerialize(): array
     {
-        return array_map(function ($value) {
+        $options = new ViewOptions();
+        $output = [];
+
+        foreach ($this->values as $key => $value) {
             if (
                 $value === null ||
                 is_bool($value) ||
                 is_int($value) ||
                 is_float($value)
             ) {
-                return $value;
+                $output[$key] = $value;
+            } else {
+                $output[$key] = $this->exportValue($key, $value, $options);
             }
+        }
 
-            return $this->exportValue($value);
-        }, $this->values);
+        return $output;
     }
 }
