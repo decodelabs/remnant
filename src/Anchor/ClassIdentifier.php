@@ -12,8 +12,6 @@ namespace DecodeLabs\Remnant\Anchor;
 use DecodeLabs\Remnant\Anchor;
 use DecodeLabs\Remnant\ClassIdentifier as ClassIdentifierInterface;
 use DecodeLabs\Remnant\Frame;
-use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod as ObjectMethodFunctionIdentifier;
-use DecodeLabs\Remnant\FunctionIdentifier\StaticMethod as StaticMethodFunctionIdentifier;
 
 class ClassIdentifier implements Anchor
 {
@@ -38,19 +36,6 @@ class ClassIdentifier implements Anchor
         int $offset,
         Frame $frame
     ): bool {
-        if (
-            !$frame->function instanceof ObjectMethodFunctionIdentifier &&
-            !$frame->function instanceof StaticMethodFunctionIdentifier
-        ) {
-            return false;
-        }
-
-        foreach ($this->identifiers as $identifier) {
-            if ($frame->function->class->equals($identifier)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $frame->matches(...$this->identifiers);
     }
 }

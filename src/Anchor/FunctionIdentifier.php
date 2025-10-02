@@ -30,12 +30,6 @@ class FunctionIdentifier implements Anchor
         int $offset,
         Frame $frame
     ): bool {
-        foreach ($this->identifiers as $identifier) {
-            if ($frame->function->equals($identifier)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $frame->matches(...$this->identifiers);
     }
 }

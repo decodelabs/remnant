@@ -29,12 +29,6 @@ class FunctionIdentifier implements Filter
     public function accepts(
         Frame $frame
     ): bool {
-        foreach ($this->identifiers as $identifier) {
-            if ($frame->function->equals($identifier)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $frame->matches(...$this->identifiers);
     }
 }

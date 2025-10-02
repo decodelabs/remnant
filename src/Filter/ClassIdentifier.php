@@ -12,8 +12,6 @@ namespace DecodeLabs\Remnant\Filter;
 use DecodeLabs\Remnant\ClassIdentifier as ClassIdentifierInterface;
 use DecodeLabs\Remnant\Filter;
 use DecodeLabs\Remnant\Frame;
-use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod as ObjectMethodFunctionIdentifier;
-use DecodeLabs\Remnant\FunctionIdentifier\StaticMethod as StaticMethodFunctionIdentifier;
 
 class ClassIdentifier implements Filter
 {
@@ -37,19 +35,6 @@ class ClassIdentifier implements Filter
     public function accepts(
         Frame $frame
     ): bool {
-        if (
-            !$frame->function instanceof ObjectMethodFunctionIdentifier &&
-            !$frame->function instanceof StaticMethodFunctionIdentifier
-        ) {
-            return false;
-        }
-
-        foreach ($this->identifiers as $identifier) {
-            if ($frame->function->class->equals($identifier)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $frame->matches(...$this->identifiers);
     }
 }

@@ -172,7 +172,7 @@ class Frame implements JsonSerializable, Stringable
         return new self(
             function: $function,
             arguments: new ArgumentList($arguments, $function),
-            callSite: self::extractLocation($frame, 'calling'),
+            callSite: self::extractLocation($frame, 'call'),
             location: self::extractLocation($frame),
         );
     }
@@ -240,6 +240,35 @@ class Frame implements JsonSerializable, Stringable
 
 
 
+    public function matches(
+        FunctionIdentifier|ClassIdentifier ...$identifiers
+    ): bool {
+        if (
+            $this->function instanceof ObjectMethod ||
+            $this->function instanceof StaticMethod
+        ) {
+            $class = $this->function->class;
+        } else {
+            $class = null;
+        }
+
+        foreach ($identifiers as $identifier) {
+            if (
+                (
+                    $identifier instanceof FunctionIdentifier &&
+                    $this->function->equals($identifier)
+                ) ||
+                (
+                    $identifier instanceof ClassIdentifier &&
+                    $class?->equals($identifier)
+                )
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public function render(
         ?ViewOptions $options = null
