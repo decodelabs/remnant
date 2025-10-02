@@ -40,7 +40,7 @@ class Paths implements Filter
     public function accepts(
         Frame $frame
     ): bool {
-        $file = $frame->callLocation?->file;
+        $file = $frame->callSite?->file;
 
         if ($file === null) {
             return true;

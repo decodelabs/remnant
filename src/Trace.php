@@ -50,8 +50,8 @@ class Trace implements
         $output = self::fromDebugBacktrace($e->getTrace(), $anchor);
 
         array_unshift($output->frames, Frame::fromDebugBacktrace([
-            'callingFile' => $e->getFile(),
-            'callingLine' => $e->getLine(),
+            'callFile' => $e->getFile(),
+            'callLine' => $e->getLine(),
             'function' => '__construct',
             'class' => get_class($e),
             'type' => '->',
@@ -75,7 +75,7 @@ class Trace implements
             $anchor->offset += 1;
         }
 
-        // Wrap in a closure to get extra frame for callingFile/Line
+        // Wrap in a closure to get extra frame for callFile/Line
         return self::fromDebugBacktrace(
             (fn () => debug_backtrace())(),
             $anchor
@@ -90,8 +90,8 @@ class Trace implements
         ?Anchor $anchor = null
     ): self {
         $last = $trace[0] ?? null;
-        $last['callingFile'] = $last['file'] ?? null;
-        $last['callingLine'] = $last['line'] ?? null;
+        $last['callFile'] = $last['file'] ?? null;
+        $last['callLine'] = $last['line'] ?? null;
         $output = [];
         $anchorFound = $anchor ? false : true;
 
@@ -107,10 +107,10 @@ class Trace implements
                 continue;
             }
 
-            $frameArray['callingFile'] = $frameArray['file'] ?? null;
-            $frameArray['callingLine'] = $frameArray['line'] ?? null;
-            $frameArray['file'] = $last['callingFile'];
-            $frameArray['line'] = $last['callingLine'];
+            $frameArray['callFile'] = $frameArray['file'] ?? null;
+            $frameArray['callLine'] = $frameArray['line'] ?? null;
+            $frameArray['file'] = $last['callFile'];
+            $frameArray['line'] = $last['callLine'];
 
             $frame = Frame::fromDebugBacktrace($frameArray);
             $last = $frameArray;

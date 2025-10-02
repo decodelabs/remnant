@@ -34,7 +34,7 @@ class Frame implements JsonSerializable, Stringable
 
     public readonly FunctionIdentifier $function;
     public readonly ArgumentList $arguments;
-    public readonly ?Location $callLocation;
+    public readonly ?Location $callSite;
     public readonly ?Location $location;
 
     /**
@@ -57,8 +57,8 @@ class Frame implements JsonSerializable, Stringable
         $last = array_shift($data);
         $output = array_shift($data);
 
-        $output['callingFile'] = $output['file'] ?? null;
-        $output['callingLine'] = $output['line'] ?? null;
+        $output['callFile'] = $output['file'] ?? null;
+        $output['callLine'] = $output['line'] ?? null;
         $output['file'] = $last['file'] ?? null;
         $output['line'] = $last['line'] ?? null;
 
@@ -172,7 +172,7 @@ class Frame implements JsonSerializable, Stringable
         return new self(
             function: $function,
             arguments: new ArgumentList($arguments, $function),
-            callLocation: self::extractLocation($frame, 'calling'),
+            callSite: self::extractLocation($frame, 'calling'),
             location: self::extractLocation($frame),
         );
     }
@@ -228,13 +228,13 @@ class Frame implements JsonSerializable, Stringable
     public function __construct(
         FunctionIdentifier $function,
         ArgumentList $arguments,
-        ?Location $callLocation = null,
+        ?Location $callSite = null,
         ?Location $location = null,
     ) {
         $this->function = $function;
         $this->arguments = $arguments;
 
-        $this->callLocation = $callLocation;
+        $this->callSite = $callSite;
         $this->location = $location;
     }
 
@@ -247,7 +247,7 @@ class Frame implements JsonSerializable, Stringable
         $output = $this->function->render($options);
         $output .= $this->arguments->render($options);
 
-        $location = $this->callLocation ?? $this->location;
+        $location = $this->callSite ?? $this->location;
 
         if ($location !== null) {
             $output .= "\n    " . (string)$location;
@@ -272,7 +272,7 @@ class Frame implements JsonSerializable, Stringable
         return [
             'function' => $this->function->jsonSerialize(),
             'arguments' => $this->arguments->jsonSerialize(),
-            'callLocation' => $this->callLocation?->jsonSerialize(),
+            'callSite' => $this->callSite?->jsonSerialize(),
             'location' => $this->location?->jsonSerialize(),
         ];
     }
