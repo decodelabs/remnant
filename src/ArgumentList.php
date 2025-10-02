@@ -111,10 +111,14 @@ class ArgumentList implements
         $options ??= new ViewOptions();
 
         foreach ($this->values as $key => $value) {
-            $output[] = '        ' . $key . ': ' . $this->exportValue($key, $value, $options);
+            $output[] = $key . ': ' . $this->exportValue($key, $value, $options);
         }
 
-        return '(' . "\n" . implode("\n", $output) . "\n" . '    )';
+        if (count($output) === 1) {
+            return '(' . $output[0] . ')';
+        }
+
+        return '(' . "\n        " . implode("\n        ", $output) . "\n" . '    )';
     }
 
     protected function exportValue(
@@ -135,11 +139,7 @@ class ArgumentList implements
 
             $value = '\'' . $value . '\'';
         } elseif (is_array($value)) {
-            if (($count = count($value)) > 0) {
-                $value = '[...' . $count . ']';
-            } else {
-                $value = '[]';
-            }
+            $value = 'array('.count($value).')';
         } elseif ($value instanceof DateTimeInterface) {
             $value = $value->format('Y-m-d H:i:s');
         } elseif (is_object($value)) {
