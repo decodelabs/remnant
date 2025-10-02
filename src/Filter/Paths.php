@@ -18,7 +18,7 @@ class Paths implements Filter
     /**
      * @var list<string>
      */
-    public array $paths = [];
+    public readonly array $paths;
 
     /**
      * @param list<string> $paths
@@ -27,9 +27,10 @@ class Paths implements Filter
         array $paths
     ) {
         if (class_exists(Monarch::class)) {
-            foreach ($paths as $path) {
-                $this->paths[] = Monarch::getPaths()->resolve($path);
-            }
+            $this->paths = array_map(
+                fn (string $path) => Monarch::getPaths()->resolve($path),
+                $paths
+            );
         } else {
             $this->paths = $paths;
         }

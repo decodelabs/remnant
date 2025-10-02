@@ -10,15 +10,14 @@ declare(strict_types=1);
 namespace DecodeLabs\Remnant;
 
 use ArrayAccess;
-use ArrayIterator;
 use BadMethodCallException;
 use Countable;
 use DecodeLabs\Remnant\Anchor\Rewind as RewindAnchor;
+use Generator;
 use IteratorAggregate;
 use JsonSerializable;
 use OutOfBoundsException;
 use Throwable;
-use Traversable;
 
 /**
  * @implements IteratorAggregate<int,Frame>
@@ -33,7 +32,7 @@ class Trace implements
     /**
      * @var array<int,Frame>
      */
-    public protected(set) array $frames = [];
+    public readonly array $frames;
 
     public ?Location $location {
         get => $this->getFirstFrame()?->location;
@@ -47,9 +46,8 @@ class Trace implements
             return $e->stackTrace;
         }
 
-        $output = self::fromDebugBacktrace($e->getTrace(), $anchor);
-
-        array_unshift($output->frames, Frame::fromDebugBacktrace([
+        $trace = $e->getTrace();
+        array_unshift($trace, [
             'callFile' => $e->getFile(),
             'callLine' => $e->getLine(),
             'function' => '__construct',
@@ -60,9 +58,9 @@ class Trace implements
                 $e->getCode(),
                 $e->getPrevious()
             ]
-        ]));
+        ]);
 
-        return $output;
+        return self::fromDebugBacktrace($trace, $anchor);
     }
 
     public static function create(
@@ -139,9 +137,7 @@ class Trace implements
     public function __construct(
         Frame ...$frames
     ) {
-        foreach ($frames as $frame) {
-            $this->frames[] = $frame;
-        }
+        $this->frames = array_values($frames);
     }
 
 
@@ -157,16 +153,9 @@ class Trace implements
         return $this->frames[$offset] ?? null;
     }
 
-    public function shift(): ?Frame
+    public function getIterator(): Generator
     {
-        return array_shift($this->frames);
-    }
-
-
-
-    public function getIterator(): Traversable
-    {
-        return new ArrayIterator($this->frames);
+        yield from $this->frames;
     }
 
     /**

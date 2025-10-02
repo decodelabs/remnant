@@ -15,7 +15,7 @@ use DecodeLabs\Remnant\Frame;
 class Rewind implements Anchor
 {
     public function __construct(
-        public int $offset
+        public readonly int $offset
     ) {
     }
 

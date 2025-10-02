@@ -19,8 +19,8 @@ class Location implements
     use PathPrettifyTrait;
 
     public function __construct(
-        public string $file,
-        public int $line,
+        public readonly string $file,
+        public readonly int $line,
     ) {
     }
 
