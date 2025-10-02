@@ -135,6 +135,8 @@ class ArgumentList implements
         } elseif (is_object($value)) {
             $class = Frame::createClassIdentifier(get_class($value), $value);
             $value = $class->render($options);
+        } elseif (is_resource($value)) {
+            $value = '{resource ' . get_resource_type($value) . '}';
         } elseif (is_bool($value)) {
             $value = $value ? 'true' : 'false';
         } elseif (is_null($value)) {
