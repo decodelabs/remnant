@@ -21,7 +21,9 @@ class ViewOptions
         public ArgumentFormat $argumentFormat = ArgumentFormat::Count,
         public int $maxStringLength = 16,
         /** @var list<string> */
-        public array $redactKeys = [],
+        public array $redactKeys = [
+            'password', 'secret', 'secretKey', 'token'
+        ],
     ) {
         if (
             $maxStringLength <= 0 ||
