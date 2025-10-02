@@ -12,13 +12,15 @@ namespace DecodeLabs\Remnant;
 use Countable;
 use Generator;
 use IteratorAggregate;
+use JsonSerializable;
 
 /**
  * @implements IteratorAggregate<int|string,mixed>
  */
 class ArgumentList implements
     Countable,
-    IteratorAggregate
+    IteratorAggregate,
+    JsonSerializable
 {
     /**
      * @var array<int|string,mixed>
@@ -142,5 +144,24 @@ class ArgumentList implements
         }
 
         return $value;
+    }
+
+    /**
+     * @return array<int|string,mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        return array_map(function ($value) {
+            if (
+                $value === null ||
+                is_bool($value) ||
+                is_int($value) ||
+                is_float($value)
+            ) {
+                return $value;
+            }
+
+            return $this->exportValue($value);
+        }, $this->values);
     }
 }

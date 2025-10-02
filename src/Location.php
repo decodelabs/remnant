@@ -9,9 +9,12 @@ declare(strict_types=1);
 
 namespace DecodeLabs\Remnant;
 
+use JsonSerializable;
 use Stringable;
 
-class Location implements Stringable
+class Location implements
+    JsonSerializable,
+    Stringable
 {
     use PathPrettifyTrait;
 
@@ -41,5 +44,16 @@ class Location implements Stringable
     public function __toString(): string
     {
         return $this->getPrettyFile() . ' : ' . $this->line;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'file' => $this->getPrettyFile(),
+            'line' => $this->line,
+        ];
     }
 }

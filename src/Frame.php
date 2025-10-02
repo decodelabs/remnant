@@ -270,9 +270,10 @@ class Frame implements JsonSerializable, Stringable
     public function jsonSerialize(): array
     {
         return [
-            'file' => $this->location ? self::prettifyPath((string)$this->location->file) : null,
-            'line' => $this->location?->line,
-            'signature' => $this->render()
+            'function' => $this->function->jsonSerialize(),
+            'arguments' => $this->arguments->jsonSerialize(),
+            'callLocation' => $this->callLocation?->jsonSerialize(),
+            'location' => $this->location?->jsonSerialize(),
         ];
     }
 }

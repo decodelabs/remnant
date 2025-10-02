@@ -16,4 +16,9 @@ trait FunctionIdentifierTrait
     ): bool {
         return in_array($this->name, $functions, true);
     }
+
+    public function jsonSerialize(): string
+    {
+        return $this->render();
+    }
 }
