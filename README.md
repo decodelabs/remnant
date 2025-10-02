@@ -100,6 +100,17 @@ echo $trace->render(new ViewOptions(
 ));
 ```
 
+Paths are prettified where possible using [Monarch](https://github.com/decodelabs/monarch). Ensure `Monarch` is available in your project, and prepare your path aliases in your bootstrap:
+
+```php
+Monarch::getPaths()->alias('@components', '@run/src/@components');
+```
+
+```php
+$trace = Trace::create();
+echo $trace->render();
+```
+
 ## Licensing
 
 Remnant is licensed under the MIT License. See [LICENSE](./LICENSE) for the full license text.
