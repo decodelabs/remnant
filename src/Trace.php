@@ -216,10 +216,13 @@ class Trace implements
         $options->gutter = $pad + 2;
         $filtered = 0;
 
-        foreach ($this->frames as $frame) {
+        foreach ($this->frames as $i => $frame) {
             $count--;
 
-            if (!$options->filter($frame)) {
+            if (
+                $i > 0 &&
+                !$options->filter($frame)
+            ) {
                 $filtered++;
                 continue;
             }
