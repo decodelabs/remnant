@@ -180,16 +180,24 @@ class Trace implements
         $options ??= new ViewOptions();
         $count = $this->count() + 1;
         $pad = strlen((string)$count);
+        $options->gutter = $pad + 2;
+        $filtered = false;
 
         foreach ($this->frames as $frame) {
             $count--;
 
             if (!$options->filter($frame)) {
+                $filtered = true;
                 continue;
             }
 
+            if ($filtered) {
+                $output .= '…'. "\n";
+                $filtered = false;
+            }
+
             $frameString = $frame->render($options);
-            $output .= str_pad((string)$count, $pad, ' ', \STR_PAD_LEFT) . ': ' . $frameString . "\n";
+            $output .= str_pad((string)$count, $pad, '0', \STR_PAD_LEFT) . ': ' . $frameString . "\n";
         }
 
         return $output;

@@ -24,7 +24,8 @@ class ViewOptions
         public array $filters = [],
         public ArgumentFormat $argumentFormat = ArgumentFormat::Count,
         public int $maxStringLength = 16,
-        Closure|true|null $redact = true
+        Closure|true|null $redact = true,
+        public int $gutter = 4
     ) {
         if (
             $maxStringLength <= 0 ||

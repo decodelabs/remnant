@@ -288,7 +288,7 @@ class Frame implements JsonSerializable, Stringable
                 $prefix = '•';
             }
 
-            $output .= "\n  " . $prefix . ' ' . (string)$location;
+            $output .= "\n" . str_repeat(' ', $options->gutter - 2) . $prefix . ' ' . (string)$location;
         }
 
         return $output;

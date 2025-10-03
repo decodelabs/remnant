@@ -124,7 +124,12 @@ class ArgumentList implements
             return '(' . $output[0] . ')';
         }
 
-        return '(' . "\n        " . implode("\n        ", $output) . "\n" . '    )';
+        $pad = str_repeat(' ', $options->gutter + 4);
+
+        return
+            '(' . "\n" .
+            $pad . implode("\n" . $pad, $output) . "\n" .
+            str_repeat(' ', $options->gutter) . ')';
     }
 
     protected function exportValue(
@@ -139,9 +144,9 @@ class ArgumentList implements
         }
 
         if (is_string($value)) {
-            if (($length = strlen($value)) > $options->maxStringLength) {
+            if (($length = mb_strlen($value)) > $options->maxStringLength) {
                 $truncated = true;
-                $value = substr($value, 0, $options->maxStringLength) . '...';
+                $value = mb_substr($value, 0, $options->maxStringLength) . '...';
             } else {
                 $truncated = false;
             }

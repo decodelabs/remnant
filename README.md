@@ -99,6 +99,7 @@ echo $trace->render(new ViewOptions(
     argumentFormat: ArgumentFormat::NamedValues
 ));
 ```
+`Paths` use prefix matching on canonicalised forward-slash paths; `Vendor` hides frames under `{projectRoot}/vendor`.
 
 Paths are prettified where possible using [Monarch](https://github.com/decodelabs/monarch). Ensure `Monarch` is available in your project, and prepare your path aliases in your bootstrap:
 
