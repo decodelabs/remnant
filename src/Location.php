@@ -18,10 +18,13 @@ class Location implements
 {
     use PathPrettifyTrait;
 
+    public readonly string $file;
+
     public function __construct(
-        public readonly string $file,
+        string $file,
         public readonly int $line,
     ) {
+        $this->file = str_replace('\\', '/', $file);
     }
 
     public function equals(

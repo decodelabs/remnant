@@ -111,7 +111,13 @@ class ArgumentList implements
         $options ??= new ViewOptions();
 
         foreach ($this->values as $key => $value) {
-            $output[] = $key . ': ' . $this->exportValue($key, $value, $options);
+            $string = $this->exportValue($key, $value, $options);
+
+            if (!array_is_list($this->values)) {
+                $string = $key . ': ' . $string;
+            }
+
+            $output[] = $string;
         }
 
         if (count($output) === 1) {
@@ -128,18 +134,25 @@ class ArgumentList implements
     ): string {
         $options ??= new ViewOptions();
 
-        if (in_array($key, $options->redactKeys ?? [])) {
+        if ($options->redact?->__invoke($key, $value)) {
             return '*sensitive*';
         }
 
         if (is_string($value)) {
-            if (strlen($value) > $options->maxStringLength) {
+            if (($length = strlen($value)) > $options->maxStringLength) {
+                $truncated = true;
                 $value = substr($value, 0, $options->maxStringLength) . '...';
+            } else {
+                $truncated = false;
             }
 
             $value = '\'' . $value . '\'';
+
+            if ($truncated) {
+                $value .= '[' . $length . ']';
+            }
         } elseif (is_array($value)) {
-            $value = 'array('.count($value).')';
+            $value = 'array(' . count($value) . ')';
         } elseif ($value instanceof DateTimeInterface) {
             $value = $value->format('Y-m-d H:i:s');
         } elseif (is_object($value)) {

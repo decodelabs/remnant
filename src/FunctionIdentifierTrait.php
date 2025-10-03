@@ -11,6 +11,11 @@ namespace DecodeLabs\Remnant;
 
 trait FunctionIdentifierTrait
 {
+    public function isInternal(): bool
+    {
+        return false;
+    }
+
     public function isFunction(
         string ...$functions
     ): bool {

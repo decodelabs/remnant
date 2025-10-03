@@ -31,6 +31,24 @@ class GlobalFunction implements FunctionIdentifier
         $this->name = $function;
     }
 
+    public function isInternal(): bool
+    {
+        if (
+            $this->name === 'require' ||
+            $this->name === 'require_once' ||
+            $this->name === 'include' ||
+            $this->name === 'include_once'
+        ) {
+            return true;
+        }
+
+        if ($reflection = $this->reflection) {
+            return $reflection->isInternal();
+        }
+
+        return false;
+    }
+
     public function equals(
         FunctionIdentifier $identifier
     ): bool {
@@ -42,7 +60,13 @@ class GlobalFunction implements FunctionIdentifier
     public function render(
         ?ViewOptions $options = null
     ): string {
-        return $this->name;
+        $output = $this->name;
+
+        if ($this->isInternal()) {
+            $output = '[internal] ' . $output;
+        }
+
+        return $output;
     }
 
     public function __toString(): string

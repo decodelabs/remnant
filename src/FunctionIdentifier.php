@@ -20,6 +20,8 @@ interface FunctionIdentifier extends
     public string $name { get; }
     public ?ReflectionFunctionAbstract $reflection { get; }
 
+    public function isInternal(): bool;
+
     public function equals(
         FunctionIdentifier $identifier
     ): bool;
