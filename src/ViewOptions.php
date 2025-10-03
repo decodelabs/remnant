@@ -29,6 +29,8 @@ class ViewOptions
         public int $gutter = 4,
         Closure|true|null $redact = true,
         public bool $collapseSingleLineArguments = false,
+        public bool $prettifyPaths = true,
+        public bool $absolutePaths = false,
     ) {
         if (
             $maxStringLength <= 0 ||

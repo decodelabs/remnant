@@ -318,6 +318,7 @@ class Frame implements
 
         return [
             'function' => $this->function->jsonSerializeWithOptions($options),
+            'internal' => $this->function->isInternal(),
             'arguments' => $this->arguments->jsonSerializeWithOptions($options),
             'callSite' => $this->callSite?->jsonSerializeWithOptions($options),
             'location' => $this->location?->jsonSerializeWithOptions($options),

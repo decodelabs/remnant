@@ -70,6 +70,12 @@ class GlobalFunction implements FunctionIdentifier
         return $output;
     }
 
+    public function jsonSerializeWithOptions(
+        ?ViewOptions $options = null
+    ): string {
+        return $this->name;
+    }
+
     public function __toString(): string
     {
         return $this->render();

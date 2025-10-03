@@ -56,6 +56,10 @@ class Location implements
         $options ??= new ViewOptions();
         $path = $this->file;
 
+        if ($options->absolutePaths) {
+            return $path;
+        }
+
         if (class_exists(Monarch::class)) {
             $path = Monarch::getPaths()->prettify($path);
         }
@@ -119,13 +123,21 @@ class Location implements
         ?ViewOptions $options = null
     ): array {
         $options ??= new ViewOptions();
+        $prettyOptions = clone $options;
+        $prettyOptions->absolutePaths = false;
+
         $output = [
-            'file' => $this->getPrettyFile($options),
-            'line' => $this->line,
+            'file' => $this->getPrettyFile($prettyOptions),
         ];
 
+        if ($options->absolutePaths) {
+            $output['absolute'] = $this->file;
+        }
+
+        $output['line'] = $this->line;
+
         if ($this->evalLine !== null) {
-            $output['evalLine'] = $this->evalLine;
+            $output['eval'] = $this->evalLine;
         }
 
         return $output;

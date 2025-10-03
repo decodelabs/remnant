@@ -13,6 +13,7 @@ use Countable;
 use DateTimeInterface;
 use Generator;
 use IteratorAggregate;
+use stdClass;
 
 /**
  * @implements IteratorAggregate<int|string,mixed>
@@ -199,16 +200,20 @@ class ArgumentList implements
     }
 
     /**
-     * @return array<int|string,mixed>
+     * @return stdClass
      */
     public function jsonSerializeWithOptions(
         ?ViewOptions $options = null
-    ): array {
+    ): stdClass {
         $options ??= new ViewOptions();
-        $output = [];
+        $output = new stdClass();
 
         foreach ($this->values as $key => $value) {
-            $output[$key] = $this->exportValue($key, $value, $options, json: true);
+            if (is_int($key)) {
+                $key = 'arg#' . $key;
+            }
+
+            $output->{$key} = $this->exportValue($key, $value, $options, json: true);
         }
 
         return $output;
