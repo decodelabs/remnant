@@ -173,6 +173,9 @@ class Trace implements
         return $this->frames[$offset] ?? null;
     }
 
+    /**
+     * @return Generator<int,Frame>
+     */
     public function getIterator(): Generator
     {
         yield from $this->frames;
