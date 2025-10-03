@@ -68,6 +68,7 @@ class Location implements
             $path === $this->file &&
             $options->rootPath !== null &&
             !str_starts_with($path, $options->rootPath) &&
+            !str_starts_with($path, '@') &&
             (null !== ($pkgPath = $this->getPackagePath($path)))
         ) {
             $path = $pkgPath;
@@ -81,14 +82,18 @@ class Location implements
     ): ?string {
         $originalPath = $path;
         $path = dirname($path);
+        $max = 10;
 
-        while (true) {
+        while ($max--) {
             if (file_exists($path . '/composer.json')) {
                 $name = basename($path);
                 return '@pkg:' . $name . substr($originalPath, strlen($path));
             }
 
-            if ($path === '/') {
+            if (
+                $path === '/' ||
+                $path === '.'
+            ) {
                 break;
             }
 
