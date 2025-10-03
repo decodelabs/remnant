@@ -76,7 +76,8 @@ class Trace implements
     }
 
     public static function create(
-        ?Anchor $anchor = null
+        ?Anchor $anchor = null,
+        ?ViewOptions $options = null
     ): self {
         if ($anchor === null) {
             $anchor = new RewindAnchor(1);
@@ -88,7 +89,8 @@ class Trace implements
         // Wrap in a closure to get extra frame for callFile/Line
         return self::fromDebugBacktrace(
             (fn () => debug_backtrace())(),
-            $anchor
+            $anchor,
+            $options
         );
     }
 
@@ -97,7 +99,8 @@ class Trace implements
      */
     public static function fromDebugBacktrace(
         array $trace,
-        ?Anchor $anchor = null
+        ?Anchor $anchor = null,
+        ?ViewOptions $options = null
     ): self {
         $last = $trace[0] ?? null;
         $last['callFile'] = $last['file'] ?? null;
@@ -142,14 +145,19 @@ class Trace implements
             );
         }
 
-        return new self(...$output);
+        return new self($output, $options);
     }
 
 
+    /**
+     * @param array<int,Frame> $frames
+     */
     public function __construct(
-        Frame ...$frames
+        array $frames,
+        ?ViewOptions $options = null
     ) {
         $this->frames = array_values($frames);
+        $this->options = $options;
     }
 
 

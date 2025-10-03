@@ -24,12 +24,11 @@ class ViewOptions
     public function __construct(
         public ?string $rootPath = null,
         public array $filters = [],
-        public ArgumentFormat $argumentFormat = ArgumentFormat::Count,
+        public ArgumentFormat $argumentFormat = ArgumentFormat::NamedValues,
         public int $maxStringLength = 16,
         public int $gutter = 4,
         Closure|true|null $redact = true,
         public bool $collapseSingleLineArguments = false,
-        public bool $prettifyPaths = true,
         public bool $absolutePaths = false,
     ) {
         if (
