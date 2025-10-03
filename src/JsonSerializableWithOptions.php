@@ -9,18 +9,11 @@ declare(strict_types=1);
 
 namespace DecodeLabs\Remnant;
 
-trait ClassIdentifierTrait
-{
-    use JsonSerializableWithOptionsTrait;
+use JsonSerializable;
 
+interface JsonSerializableWithOptions extends JsonSerializable
+{
     public function jsonSerializeWithOptions(
         ?ViewOptions $options = null
-    ): string {
-        return $this->render($options);
-    }
-
-    public function __toString(): string
-    {
-        return $this->render();
-    }
+    ): mixed;
 }

@@ -16,7 +16,6 @@ use DecodeLabs\Remnant\FunctionIdentifier\GlobalFunction;
 use DecodeLabs\Remnant\FunctionIdentifier\NamespaceFunction;
 use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod;
 use DecodeLabs\Remnant\FunctionIdentifier\StaticMethod;
-use JsonSerializable;
 use OutOfBoundsException;
 use Stringable;
 use UnexpectedValueException;
@@ -28,9 +27,11 @@ use function implode;
 use function str_contains;
 use function str_starts_with;
 
-class Frame implements JsonSerializable, Stringable
+class Frame implements
+    JsonSerializableWithOptions,
+    Stringable
 {
-    use PathPrettifyTrait;
+    use JsonSerializableWithOptionsTrait;
 
     public readonly FunctionIdentifier $function;
     public readonly ArgumentList $arguments;
@@ -310,13 +311,16 @@ class Frame implements JsonSerializable, Stringable
     /**
      * @return array<string,mixed>
      */
-    public function jsonSerialize(): array
-    {
+    public function jsonSerializeWithOptions(
+        ?ViewOptions $options = null
+    ): array {
+        $options ??= new ViewOptions();
+
         return [
-            'function' => $this->function->jsonSerialize(),
-            'arguments' => $this->arguments->jsonSerialize(),
-            'callSite' => $this->callSite?->jsonSerialize(),
-            'location' => $this->location?->jsonSerialize(),
+            'function' => $this->function->jsonSerializeWithOptions($options),
+            'arguments' => $this->arguments->jsonSerializeWithOptions($options),
+            'callSite' => $this->callSite?->jsonSerializeWithOptions($options),
+            'location' => $this->location?->jsonSerializeWithOptions($options),
         ];
     }
 }

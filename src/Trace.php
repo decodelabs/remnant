@@ -15,7 +15,6 @@ use Countable;
 use DecodeLabs\Remnant\Anchor\Rewind as RewindAnchor;
 use Generator;
 use IteratorAggregate;
-use JsonSerializable;
 use OutOfBoundsException;
 use Throwable;
 
@@ -37,7 +36,7 @@ use const STR_PAD_LEFT;
 class Trace implements
     IteratorAggregate,
     ArrayAccess,
-    JsonSerializable,
+    JsonSerializableWithOptions,
     Countable
 {
     /**
@@ -48,6 +47,8 @@ class Trace implements
     public ?Location $location {
         get => $this->getFirstFrame()?->location;
     }
+
+    public ?ViewOptions $options = null;
 
     public static function fromException(
         Throwable $e,
@@ -174,9 +175,18 @@ class Trace implements
      */
     public function jsonSerialize(): array
     {
+        return $this->jsonSerializeWithOptions($this->options);
+    }
+
+    /**
+     * @return array{schema:string,frames:array<array<string,mixed>>}
+     */
+    public function jsonSerializeWithOptions(
+        ?ViewOptions $options = null
+    ): array {
         return [
             'schema' => 'remnant.trace@1',
-            'frames' => array_map(fn ($frame) => $frame->jsonSerialize(), $this->frames)
+            'frames' => array_map(fn ($frame) => $frame->jsonSerializeWithOptions($options), $this->frames)
         ];
     }
 
@@ -189,7 +199,7 @@ class Trace implements
         ?ViewOptions $options = null
     ): string {
         $output = '';
-        $options ??= new ViewOptions();
+        $options ??= $this->options ?? new ViewOptions();
         $count = $this->count() + 1;
         $pad = strlen((string)$count);
         $options->gutter = $pad + 2;
@@ -212,7 +222,7 @@ class Trace implements
             $output .= str_pad((string)$count, $pad, '0', STR_PAD_LEFT) . ': ' . $frameString . "\n\n";
         }
 
-        return $output;
+        return substr($output, 0, -1);
     }
 
 

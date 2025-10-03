@@ -22,12 +22,13 @@ class ViewOptions
      * @param Closure(string,mixed):bool $redact
      */
     public function __construct(
+        public ?string $rootPath = null,
         public array $filters = [],
         public ArgumentFormat $argumentFormat = ArgumentFormat::Count,
         public int $maxStringLength = 16,
-        Closure|true|null $redact = true,
         public int $gutter = 4,
-        public ?string $rootPath = null
+        Closure|true|null $redact = true,
+        public bool $collapseSingleLineArguments = false,
     ) {
         if (
             $maxStringLength <= 0 ||

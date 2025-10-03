@@ -13,7 +13,6 @@ use Countable;
 use DateTimeInterface;
 use Generator;
 use IteratorAggregate;
-use JsonSerializable;
 
 /**
  * @implements IteratorAggregate<int|string,mixed>
@@ -21,8 +20,10 @@ use JsonSerializable;
 class ArgumentList implements
     Countable,
     IteratorAggregate,
-    JsonSerializable
+    JsonSerializableWithOptions
 {
+    use JsonSerializableWithOptionsTrait;
+
     /**
      * @var array<int|string,mixed>
      */
@@ -109,18 +110,24 @@ class ArgumentList implements
 
         $output = [];
         $options ??= new ViewOptions();
+        $isList = array_is_list($this->values);
 
         foreach ($this->values as $key => $value) {
             $string = $this->exportValue($key, $value, $options);
 
-            if (!array_is_list($this->values)) {
+            if ($isList) {
+                $string = 'arg#' . $key . ': ' . $string;
+            } else {
                 $string = $key . ': ' . $string;
             }
 
             $output[] = $string;
         }
 
-        if (count($output) === 1) {
+        if (
+            count($output) === 1 &&
+            $options->collapseSingleLineArguments
+        ) {
             return '(' . $output[0] . ')';
         }
 
@@ -132,11 +139,15 @@ class ArgumentList implements
             str_repeat(' ', $options->gutter) . ')';
     }
 
+    /**
+     * @return ($json is true ? mixed : string)
+     */
     protected function exportValue(
         string|int $key,
         mixed $value,
-        ?ViewOptions $options = null
-    ): string {
+        ?ViewOptions $options = null,
+        bool $json = false
+    ): mixed {
         $options ??= new ViewOptions();
 
         if ($options->redact?->__invoke($key, $value)) {
@@ -162,13 +173,24 @@ class ArgumentList implements
             $value = $value->format('Y-m-d H:i:s');
         } elseif (is_object($value)) {
             $class = Frame::createClassIdentifier(get_class($value), $value);
-            $value = $class->render($options);
+            $value = 'object(' . $class->render($options) . ')';
         } elseif (is_resource($value)) {
             $value = '{resource ' . get_resource_type($value) . '}';
+        } elseif (
+            is_int($value) ||
+            is_float($value)
+        ) {
+            if (!$json) {
+                $value = (string)$value;
+            }
         } elseif (is_bool($value)) {
-            $value = $value ? 'true' : 'false';
+            if (!$json) {
+                $value = $value ? 'true' : 'false';
+            }
         } elseif (is_null($value)) {
-            $value = 'null';
+            if (!$json) {
+                $value = 'null';
+            }
         } else {
             $value = get_debug_type($value);
         }
@@ -179,22 +201,14 @@ class ArgumentList implements
     /**
      * @return array<int|string,mixed>
      */
-    public function jsonSerialize(): array
-    {
-        $options = new ViewOptions();
+    public function jsonSerializeWithOptions(
+        ?ViewOptions $options = null
+    ): array {
+        $options ??= new ViewOptions();
         $output = [];
 
         foreach ($this->values as $key => $value) {
-            if (
-                $value === null ||
-                is_bool($value) ||
-                is_int($value) ||
-                is_float($value)
-            ) {
-                $output[$key] = $value;
-            } else {
-                $output[$key] = $this->exportValue($key, $value, $options);
-            }
+            $output[$key] = $this->exportValue($key, $value, $options, json: true);
         }
 
         return $output;

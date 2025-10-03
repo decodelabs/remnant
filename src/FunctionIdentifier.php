@@ -9,12 +9,11 @@ declare(strict_types=1);
 
 namespace DecodeLabs\Remnant;
 
-use JsonSerializable;
 use ReflectionFunctionAbstract;
 use Stringable;
 
 interface FunctionIdentifier extends
-    JsonSerializable,
+    JsonSerializableWithOptions,
     Stringable
 {
     public string $name { get; }

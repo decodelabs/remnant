@@ -11,6 +11,8 @@ namespace DecodeLabs\Remnant;
 
 trait FunctionIdentifierTrait
 {
+    use JsonSerializableWithOptionsTrait;
+
     public function isInternal(): bool
     {
         return false;
@@ -22,8 +24,9 @@ trait FunctionIdentifierTrait
         return in_array($this->name, $functions, true);
     }
 
-    public function jsonSerialize(): string
-    {
-        return $this->render();
+    public function jsonSerializeWithOptions(
+        ?ViewOptions $options = null
+    ): string {
+        return $this->render($options);
     }
 }

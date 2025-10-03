@@ -10,14 +10,13 @@ declare(strict_types=1);
 namespace DecodeLabs\Remnant;
 
 use DecodeLabs\Monarch;
-use JsonSerializable;
 use Stringable;
 
 class Location implements
-    JsonSerializable,
+    JsonSerializableWithOptions,
     Stringable
 {
-    use PathPrettifyTrait;
+    use JsonSerializableWithOptionsTrait;
 
     public readonly string $file;
     public readonly int $line;
@@ -116,10 +115,12 @@ class Location implements
     /**
      * @return array<string,mixed>
      */
-    public function jsonSerialize(): array
-    {
+    public function jsonSerializeWithOptions(
+        ?ViewOptions $options = null
+    ): array {
+        $options ??= new ViewOptions();
         $output = [
-            'file' => $this->getPrettyFile(),
+            'file' => $this->getPrettyFile($options),
             'line' => $this->line,
         ];
 
