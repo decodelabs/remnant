@@ -17,6 +17,6 @@ class Vendor implements Filter
     public function accepts(
         Frame $frame
     ): bool {
-        return !str_contains($frame->location->file ?? '', '/vendor/');
+        return !str_contains($frame->callSite->file ?? '', '/vendor/');
     }
 }
