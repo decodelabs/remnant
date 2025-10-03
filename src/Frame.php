@@ -279,7 +279,16 @@ class Frame implements JsonSerializable, Stringable
         $location = $this->callSite ?? $this->location;
 
         if ($location !== null) {
-            $output .= "\n    " . (string)$location;
+            if (
+                $this->function->isInternal() ||
+                str_contains((string)$location, '/vendor/')
+            ) {
+                $prefix = '◦';
+            } else {
+                $prefix = '•';
+            }
+
+            $output .= "\n  " . $prefix . ' ' . (string)$location;
         }
 
         return $output;
