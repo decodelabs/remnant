@@ -274,21 +274,26 @@ class Frame implements JsonSerializable, Stringable
         ?ViewOptions $options = null
     ): string {
         $options ??= new ViewOptions();
+        $location = $this->callSite ?? $this->location;
         $output = $this->function->render($options);
         $output .= $this->arguments->render($options);
-        $location = $this->callSite ?? $this->location;
 
         if ($location !== null) {
-            if (
-                $this->function->isInternal() ||
-                str_contains((string)$location, '/vendor/')
+            if ($this->function->isInternal()) {
+                $prefix = '○';
+            } elseif (str_contains($location->file, '/vendor/')) {
+                $prefix = '◒';
+            } elseif (
+                $options->rootPath !== null &&
+                !str_starts_with($location->file, $options->rootPath)
             ) {
-                $prefix = '◦';
+                $prefix = '◐';
             } else {
-                $prefix = '•';
+                $prefix = '●';
             }
 
-            $output .= "\n" . str_repeat(' ', $options->gutter - 2) . $prefix . ' ' . (string)$location;
+            $output = $prefix . ' ' . $output;
+            $output .= "\n" . str_repeat(' ', $options->gutter) . $location->render($options);
         }
 
         return $output;

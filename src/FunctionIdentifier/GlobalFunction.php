@@ -34,6 +34,7 @@ class GlobalFunction implements FunctionIdentifier
     public function isInternal(): bool
     {
         if (
+            $this->name === 'eval' ||
             $this->name === 'require' ||
             $this->name === 'require_once' ||
             $this->name === 'include' ||

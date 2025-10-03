@@ -19,6 +19,17 @@ use JsonSerializable;
 use OutOfBoundsException;
 use Throwable;
 
+use function array_map;
+use function array_unshift;
+use function array_values;
+use function count;
+use function debug_backtrace;
+use function str_ends_with;
+use function str_pad;
+use function strlen;
+
+use const STR_PAD_LEFT;
+
 /**
  * @implements IteratorAggregate<int,Frame>
  * @implements ArrayAccess<int,Frame>
@@ -159,13 +170,14 @@ class Trace implements
     }
 
     /**
-     * @return array<array<string, mixed>>
+     * @return array{schema:string,frames:array<array<string,mixed>>}
      */
     public function jsonSerialize(): array
     {
-        return array_map(function ($frame) {
-            return $frame->jsonSerialize();
-        }, $this->frames);
+        return [
+            'schema' => 'remnant.trace@1',
+            'frames' => array_map(fn ($frame) => $frame->jsonSerialize(), $this->frames)
+        ];
     }
 
     public function count(): int
@@ -181,23 +193,23 @@ class Trace implements
         $count = $this->count() + 1;
         $pad = strlen((string)$count);
         $options->gutter = $pad + 2;
-        $filtered = false;
+        $filtered = 0;
 
         foreach ($this->frames as $frame) {
             $count--;
 
             if (!$options->filter($frame)) {
-                $filtered = true;
+                $filtered++;
                 continue;
             }
 
             if ($filtered) {
-                $output .= '…'. "\n";
-                $filtered = false;
+                $output .= str_repeat(' ', $options->gutter) . '… ' . $filtered . ' hidden' . "\n\n";
+                $filtered = 0;
             }
 
             $frameString = $frame->render($options);
-            $output .= str_pad((string)$count, $pad, '0', \STR_PAD_LEFT) . ': ' . $frameString . "\n";
+            $output .= str_pad((string)$count, $pad, '0', STR_PAD_LEFT) . ': ' . $frameString . "\n\n";
         }
 
         return $output;

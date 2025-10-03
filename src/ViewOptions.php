@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace DecodeLabs\Remnant;
 
 use Closure;
+use DecodeLabs\Monarch;
 use InvalidArgumentException;
 
 class ViewOptions
@@ -25,7 +26,8 @@ class ViewOptions
         public ArgumentFormat $argumentFormat = ArgumentFormat::Count,
         public int $maxStringLength = 16,
         Closure|true|null $redact = true,
-        public int $gutter = 4
+        public int $gutter = 4,
+        public ?string $rootPath = null
     ) {
         if (
             $maxStringLength <= 0 ||
@@ -38,6 +40,13 @@ class ViewOptions
             $this->redact = fn (string $key, mixed $value) => $key === 'password' || $key === 'secret' || $key === 'secretKey' || $key === 'token';
         } else {
             $this->redact = $redact;
+        }
+
+        if (
+            $rootPath === null &&
+            class_exists(Monarch::class)
+        ) {
+            $this->rootPath = Monarch::getPaths()->root;
         }
     }
 

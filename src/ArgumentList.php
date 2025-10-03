@@ -140,7 +140,7 @@ class ArgumentList implements
         $options ??= new ViewOptions();
 
         if ($options->redact?->__invoke($key, $value)) {
-            return '*sensitive*';
+            return '⟪redacted⟫';
         }
 
         if (is_string($value)) {

@@ -101,11 +101,13 @@ class Closure implements FunctionIdentifier
     public function render(
         ?ViewOptions $options = null
     ): string {
+        $options ??= new ViewOptions();
+
         if ($this->location === null) {
             return '{closure}';
         }
 
-        return '{closure:' . $this->location->getPrettyFile() . ':' . $this->location->line . '}';
+        return '{closure:' . $this->location->getPrettyFile($options) . ':' . $this->location->line . '}';
     }
 
     public function __toString(): string

@@ -23,6 +23,12 @@ trait ClassTrait
     public readonly ClassIdentifier $class;
     public readonly string $name;
 
+    public ?string $namespace {
+        get {
+            return $this->class->reflection?->getNamespaceName();
+        }
+    }
+
     public ?ReflectionFunctionAbstract $reflection {
         get {
             if (!$classRef = $this->class->reflection) {

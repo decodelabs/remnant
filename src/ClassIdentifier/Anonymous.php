@@ -79,10 +79,12 @@ class Anonymous implements ClassIdentifier
     public function render(
         ?ViewOptions $options = null
     ): string {
+        $options ??= new ViewOptions();
+
         if ($this->location === null) {
             return '{anonymous}';
         }
 
-        return '{anonymous:' . $this->location->getPrettyFile() . ':' . $this->location->line . '}';
+        return '{anonymous:' . $this->location->getPrettyFile($options) . ':' . $this->location->line . '}';
     }
 }
