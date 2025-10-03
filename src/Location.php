@@ -19,12 +19,12 @@ class Location implements
     use JsonSerializableWithOptionsTrait;
 
     public readonly string $file;
-    public readonly int $line;
+    public readonly ?int $line;
     public readonly ?int $evalLine;
 
     public function __construct(
         string $file,
-        int $line,
+        ?int $line = null,
         ?int $evalLine = null
     ) {
         if (preg_match('/^(?<path>.+)\((?<line>[0-9]+)\) : eval\(\)\'d code/', $file, $matches)) {
@@ -107,7 +107,11 @@ class Location implements
         ?ViewOptions $options = null
     ): string {
         $options ??= new ViewOptions();
-        $output = $this->getPrettyFile($options) . ':' . $this->line;
+        $output = $this->getPrettyFile($options);
+
+        if ($this->line !== null) {
+            $output .= ':' . $this->line;
+        }
 
         if ($this->evalLine !== null) {
             $output .= ' [eval:' . $this->evalLine . ']';

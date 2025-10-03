@@ -85,6 +85,12 @@ class Anonymous implements ClassIdentifier
             return '{anonymous}';
         }
 
-        return '{anonymous:' . $this->location->getPrettyFile($options) . ':' . $this->location->line . '}';
+        $location = $this->location->getPrettyFile($options);
+
+        if ($this->location->line !== null) {
+            $location .= ':' . $this->location->line;
+        }
+
+        return '{anonymous:' . $location . '}';
     }
 }

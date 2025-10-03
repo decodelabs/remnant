@@ -107,7 +107,13 @@ class Closure implements FunctionIdentifier
             return '{closure}';
         }
 
-        return '{closure:' . $this->location->getPrettyFile($options) . ':' . $this->location->line . '}';
+        $location = $this->location->getPrettyFile($options);
+
+        if ($this->location->line !== null) {
+            $location .= ':' . $this->location->line;
+        }
+
+        return '{closure:' . $location . '}';
     }
 
     public function __toString(): string
