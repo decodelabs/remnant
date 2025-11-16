@@ -438,10 +438,10 @@ Tests should cover:
 
 From the Decode Labs package index (at time of writing):
 
-- **Code:** 5.0
-- **Readme:** 5.0
-- **Docs:** (spec evolving)
-- **Tests:** (to be updated as coverage grows)
+- **Code:** 5
+- **Readme:** 5
+- **Docs:** 0
+- **Tests:** 0
 
 Remnant is a **high-quality, dependency-free utility** that should be treated as a stable foundation for trace formatting across the Decode Labs ecosystem.
 
