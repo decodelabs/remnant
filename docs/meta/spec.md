@@ -1,9 +1,9 @@
 # Remnant — Package Specification
 
-> **Cluster:** `observability`
-> **Language:** `php`
-> **Milestone:** `m1`
-> **Repo:** `https://github.com/decodelabs/remnant`
+> **Cluster:** `observability`  
+> **Language:** `php`  
+> **Milestone:** `m1`  
+> **Repo:** `https://github.com/decodelabs/remnant`  
 > **Role:** Stack traces
 
 This document describes the purpose, contracts, and design of **Remnant** within the Decode Labs ecosystem.
@@ -51,7 +51,7 @@ Remnant is a **presentation layer** for stack traces, not a complete observabili
 
 It sits at a low level in the dependency graph:
 
-- It has minimal dependencies (PHP 8.4+ only, optional Monarch integration).
+- It has minimal dependencies (optional Monarch integration).
 - It is safe to use from almost anywhere in the stack.
 - Higher-level packages (exception handlers, logging, debugging tools) use Remnant to:
   - format exception traces,
@@ -146,12 +146,13 @@ From `composer.json`:
 
 **Optional integration:**
 
-- `decodelabs/monarch` (conflict: `<0.2`)
-  Used for path prettification when available. Remnant detects Monarch at runtime and uses it to prettify file paths if present.
+- `decodelabs/monarch` (optional)
+
+  Remnant detects Monarch at runtime (if installed) and uses it to prettify file
+  paths (project root, package aliases, etc.). Composer declares a conflict with
+  `decodelabs/monarch` versions `<0.2` to avoid known-incompatible releases.
 
 ### 4.2 External Dependencies
-
-- None (Remnant requires only PHP 8.4+).
 
 Remnant is designed to be **dependency-free** except for PHP itself, with optional graceful integration with Monarch for enhanced path formatting.
 
