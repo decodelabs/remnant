@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 - Improved doc comment headers
+- Added AGENTS.md
+- Integrated Chorus dev dependency
 
 ---
 
@@ -84,3 +86,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### [v0.1.0](https://github.com/decodelabs/remnant/commits/v0.1.0) - 4th June 2025
 
 - Ported Trace, Frame and PreparedTraceException from glitch-support
+
