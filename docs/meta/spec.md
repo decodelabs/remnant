@@ -1,475 +1,433 @@
 # Remnant — Package Specification
 
-> **Cluster:** `observability`  
-> **Language:** `php`  
-> **Milestone:** `m1`  
-> **Repo:** `https://github.com/decodelabs/remnant`  
+> **Cluster:** `observability`
+> **Language:** `php`
+> **Milestone:** `m1`
+> **Repo:** `https://github.com/decodelabs/remnant`
 > **Role:** Stack traces
 
-This document describes the purpose, contracts, and design of **Remnant** within the Decode Labs ecosystem.
+## Overview
 
-It is aimed at:
+### Purpose
 
-- Developers **using** Remnant in their own applications or libraries.
-- Contributors **maintaining or extending** Remnant.
-- Tools and AI assistants that need to reason about its behaviour.
+Remnant provides easier stack traces with a clean, readable view for humans and a stable JSON schema for tools. It avoids leaking sensitive values by default and lets you hide noisy bits when needed.
 
----
+Key features:
+- **Readable traces** with clear call-sites and compact argument summaries
+- **Stable JSON** that tools can consume
+- **Safe by default** – no deep value dumping, sensitive values are redacted
+- **Root / package aware** – paths are prettified and simplified where possible
+- **Tiny & modern** – PHP 8.4+, property getters and readonly value objects
 
-## 1. Overview
+### Non-Goals
 
-### 1.1 Purpose
+- Remnant does not provide exception handling or error reporting functionality.
+- It does not integrate with logging systems or error tracking services.
+- It does not provide performance profiling or execution timing.
+- It does not handle error recovery or retry mechanisms.
+- It does not provide debugging breakpoints or step-through debugging.
 
-Remnant provides **easier stack traces** for PHP applications. It transforms raw `debug_backtrace()` output into:
+## Role in the Ecosystem
 
-- **Readable human-friendly traces** with clear call-sites, compact argument summaries, and visual indicators for frame types.
-- **Stable JSON schema** (`remnant.trace@1`) that tools can consume programmatically.
-- **Safe-by-default** argument rendering that avoids leaking sensitive values and prevents deep value dumping.
-- **Path-aware formatting** that prettifies file paths using project root and package aliases (via Monarch integration).
+### Cluster & Positioning
 
-Remnant focuses on making stack traces **useful for debugging** without overwhelming developers with noise or exposing sensitive data.
+Remnant belongs to the **observability** cluster, focusing on debugging and inspection capabilities. It complements other observability packages like `nuance` (dump inspector) and `glitch` (error handling) by providing structured stack trace analysis.
 
-### 1.2 Non-Goals
+### Usage Contexts
 
-Remnant does **not**:
+- **Debugging**: Generating readable stack traces for debugging purposes
+- **Error reporting**: Creating structured trace data for error tracking systems
+- **Logging**: Including formatted traces in log output
+- **Development tools**: Providing trace data for IDE integration or debugging tools
+- **Exception handling**: Converting exceptions to structured trace data
 
-- Provide logging or error reporting infrastructure (it only formats traces).
-- Replace general-purpose error monitoring or observability tools.
-- Implement framework-specific error pages or HTTP error responses.
-- Perform deep introspection or serialization of complex object graphs (it provides compact summaries only).
+## Public Surface
 
-Remnant is a **presentation layer** for stack traces, not a complete observability solution.
+### Key Types
 
----
+- **`Trace`** (class): Main entry point for creating and managing stack traces. Implements `IteratorAggregate`, `ArrayAccess`, `JsonSerializableWithOptions`, and `Countable`. Provides methods for creating traces from current execution or exceptions.
 
-## 2. Role in the Ecosystem
+- **`Frame`** (class): Represents a single stack frame with function identifier, arguments, call site, and location. Implements `JsonSerializableWithOptions` and `Stringable`.
 
-### 2.1 Cluster & Positioning
+- **`ViewOptions`** (class): Configuration for customizing trace output, including filters, argument formatting, path display, and redaction rules.
 
-- **Cluster:** `observability`
-- Remnant is a **foundational utility** used by other Decode Labs packages (notably `decodelabs/exceptional`) to present stack traces in a consistent, readable format.
+- **`Location`** (class): Represents a file location with line number and optional eval line. Implements `JsonSerializableWithOptions` and `Stringable`.
 
-It sits at a low level in the dependency graph:
+- **`ArgumentList`** (class): Manages function arguments with name resolution and formatting. Implements `Countable`, `IteratorAggregate`, and `JsonSerializableWithOptions`.
 
-- It has minimal dependencies (optional Monarch integration).
-- It is safe to use from almost anywhere in the stack.
-- Higher-level packages (exception handlers, logging, debugging tools) use Remnant to:
-  - format exception traces,
-  - generate readable debug output,
-  - produce structured trace data for tooling.
+- **`Anchor`** (interface): Defines anchors for rewinding traces to specific points. Implementations include `Anchor\Rewind`, `Anchor\ClassIdentifier`, and `Anchor\FunctionIdentifier`.
 
-### 2.2 Typical Usage Contexts
+- **`Filter`** (interface): Defines filters for excluding frames from trace output. Implementations include `Filter\Vendor`, `Filter\Paths`, `Filter\FunctionIdentifier`, `Filter\ClassIdentifier`, and `Filter\NamespaceIdentifier`.
 
-Typical places Remnant appears:
+- **`FunctionIdentifier`** (interface): Identifies functions with various implementations: `FunctionIdentifier\GlobalFunction`, `FunctionIdentifier\NamespaceFunction`, `FunctionIdentifier\ObjectMethod`, `FunctionIdentifier\StaticMethod`, `FunctionIdentifier\Closure`, `FunctionIdentifier\ClassTrait`.
 
-- **Exception handling** (e.g., `exceptional` package) formatting exception stack traces.
-- **Debugging tools** and development utilities that need to display call stacks.
-- **CLI and HTTP runtimes** that want to present errors with readable traces.
-- **Testing frameworks** that need to format assertion failures or test errors.
+- **`ClassIdentifier`** (interface): Identifies classes with implementations: `ClassIdentifier\Native` and `ClassIdentifier\Anonymous`.
 
-Remnant is intended to be used whenever a Decode Labs package needs to:
+- **`ArgumentFormat`** (enum): Defines argument display formats: `Count`, `InlineValues`, `NamedValues`.
 
-- display a stack trace to a developer,
-- serialize trace data for tooling,
-- filter or customize trace output.
+### Main Entry Points
 
----
+**Trace Creation:**
+- `Trace::create(?Anchor $anchor = null, ?ViewOptions $options = null): Trace` — Create trace from current execution point
+- `Trace::fromException(Throwable $e, ?Anchor $anchor = null): Trace` — Create trace from exception
+- `Trace::fromDebugBacktrace(array $trace, ?Anchor $anchor = null, ?ViewOptions $options = null): Trace` — Create trace from debug_backtrace() array
 
-## 3. Public Surface
+**Trace Access:**
+- `$trace->frames` — Readonly array of Frame instances
+- `$trace->location` — Location of first frame (readonly property)
+- `$trace->getFirstFrame(): ?Frame` — Get the first frame
+- `$trace->getFrame(int $offset): ?Frame` — Get frame by index
+- `$trace[0]` — Array access to frames (returns `?Frame`)
+- `foreach ($trace as $frame)` — Iterator access
+- `count($trace)` — Count frames
 
-> This section focuses on the conceptual API, not every symbol.
+**Trace Output:**
+- `(string)$trace` — String conversion returns formatted trace
+- `$trace->render(?ViewOptions $options = null): string` — Render trace with optional options
+- `json_encode($trace)` — JSON serialization with stable schema
 
-### 3.1 Key Types
+**Frame:**
+- `Frame::create(int $rewind = 0): Frame` — Create single frame from current execution
+- `Frame::fromDebugBacktrace(array $frame): Frame` — Create frame from debug_backtrace() entry
+- `$frame->function` — FunctionIdentifier (readonly)
+- `$frame->arguments` — ArgumentList (readonly)
+- `$frame->callSite` — Location where call originated (readonly, nullable)
+- `$frame->location` — Location where frame executed (readonly, nullable)
+- `$frame->matches(FunctionIdentifier|ClassIdentifier ...$identifiers): bool` — Check if frame matches identifiers
+- `(string)$frame` — String conversion returns formatted frame
 
-The primary public types are:
+**ViewOptions:**
+- `new ViewOptions(?string $rootPath = null, array $filters = [], ArgumentFormat $argumentFormat = ArgumentFormat::NamedValues, int $maxStringLength = 16, int $gutter = 4, Closure|true|null $redact = true, bool $collapseSingleLineArguments = false, bool $absolutePaths = false)` — Constructor
+- `$options->filter(Frame $frame): bool` — Check if frame passes filters
 
-- `DecodeLabs\Remnant\Trace`
-  Main entry point for creating and working with stack traces. Implements `IteratorAggregate`, `ArrayAccess`, `Countable`, and `JsonSerializable`.
+**Anchors:**
+- `new Anchor\Rewind(int $offset)` — Rewind trace by number of frames
+- `new Anchor\FunctionIdentifier(FunctionIdentifier $identifier)` — Rewind to function
+- `new Anchor\ClassIdentifier(ClassIdentifier|string $identifier)` — Rewind to class
 
-- `DecodeLabs\Remnant\Frame`
-  Represents a single stack frame with function identifier, arguments, call site, and location. Implements `Stringable` and `JsonSerializable`.
+**Filters:**
+- `new Filter\Vendor()` — Filter vendor directory frames
+- `new Filter\Paths(array $paths)` — Filter by path prefixes
+- `new Filter\FunctionIdentifier(FunctionIdentifier $identifier)` — Filter by function
+- `new Filter\ClassIdentifier(ClassIdentifier|string $identifier)` — Filter by class
+- `new Filter\NamespaceIdentifier(string|ClassIdentifier $identifier)` — Filter by namespace
 
-- `DecodeLabs\Remnant\ViewOptions`
-  Configuration object for customizing trace rendering (filters, argument format, path options, redaction rules).
+## Dependencies
 
-- `DecodeLabs\Remnant\Location`
-  Represents a file location (file path and line number) with prettification support.
+### Decode Labs
 
-- `DecodeLabs\Remnant\ArgumentList`
-  Represents function arguments with safe rendering (no deep dumping).
+None. Remnant has no Decode Labs dependencies.
 
-- `DecodeLabs\Remnant\FunctionIdentifier`
-  Interface for identifying functions (methods, closures, global functions, etc.).
+### External
 
-- `DecodeLabs\Remnant\ClassIdentifier`
-  Interface for identifying classes (including anonymous classes).
+- **PHP**: See `composer.json` for supported PHP versions.
 
-- `DecodeLabs\Remnant\Anchor`
-  Interface for anchoring/rewinding traces to specific points.
+### Optional
 
-- `DecodeLabs\Remnant\Filter`
-  Interface for filtering frames from trace output.
+- **`decodelabs/monarch`**: Detected at runtime if installed, used for path prettification and root path detection. If available, paths are prettified using Monarch's path aliases, and the root path is automatically detected.
 
-### 3.2 Main Entry Points
+## Behaviour & Contracts
 
-The main usage pattern is creating a `Trace` via static factory methods:
+### Invariants
+
+- A `Trace` instance is immutable after construction (frames array is readonly).
+- Frames are indexed starting from 0, matching `debug_backtrace()` order.
+- Negative or out-of-range frame indices return `null`.
+- String output uses consistent formatting with visual indicators for frame types.
+- JSON output includes schema tag `"remnant.trace@1"` for versioning.
+
+### Input & Output Contracts
+
+**Trace Creation:**
+- `create()` defaults to rewinding 1 frame (excluding the `create()` call itself).
+- `fromException()` handles `PreparedTraceException` specially, returning its pre-computed trace.
+- Anchors rewind the trace until the anchor condition is met.
+- Empty traces after anchoring throw `OutOfBoundsException`.
+
+**Frame Rendering:**
+- Frames use visual indicators: `●` (project root), `◐` (symlinked package), `◒` (vendor), `○` (internal).
+- Call-site is shown on line below function signature.
+- Arguments are formatted according to `ArgumentFormat` setting.
+- Long strings are truncated with ellipsis and length indicator.
+
+**Path Prettification:**
+- Paths use `@root:` prefix for project root.
+- Paths use `@pkg:name:` prefix for symlinked packages.
+- Absolute paths are opt-in via `ViewOptions`.
+- Monarch integration provides additional prettification if available.
+
+**Argument Formatting:**
+- `Count`: Shows only argument count, e.g., `(...3)`
+- `InlineValues`: Shows values inline, e.g., `('value', 123, object(Class))`
+- `NamedValues`: Shows named arguments with values, e.g., `(\n    name: 'value'\n)`
+
+**Redaction:**
+- Default redaction covers: `password`, `secret`, `secretKey`, `token`.
+- Custom redaction via closure: `fn (string $key, mixed $value): bool`.
+- Redacted values shown as `⟪redacted⟫`.
+
+## Error Handling
+
+- **Empty stack**: `Trace::fromDebugBacktrace()` throws `OutOfBoundsException` if trace is empty after anchoring.
+- **Invalid string length**: `ViewOptions` constructor throws `InvalidArgumentException` if `maxStringLength` is not between 1 and 100.
+- **Array access modification**: Attempting to modify trace via array access throws `BadMethodCallException`.
+- **Frame access**: Out-of-range frame access returns `null` (does not throw).
+
+## Configuration & Extensibility
+
+### Custom Anchors
+
+Implement the `Anchor` interface to create custom anchoring logic:
 
 ```php
-use DecodeLabs\Remnant\Trace;
-
-// Create trace from current call stack
-$trace = Trace::create();
-
-// Create trace from an exception
-$trace = Trace::fromException($e);
-
-// Create trace from debug_backtrace() array
-$trace = Trace::fromDebugBacktrace($backtrace);
-```
-
-Traces can be:
-
-- **Rendered as strings** via `__toString()` or `render()`.
-- **Serialized as JSON** via `json_encode()` (produces `remnant.trace@1` schema).
-- **Iterated** as arrays of `Frame` objects.
-- **Filtered and customized** via `ViewOptions`.
-
----
-
-## 4. Dependencies
-
-### 4.1 Direct Decode Labs Dependencies
-
-From `composer.json`:
-
-- None (Remnant has no required Decode Labs dependencies).
-
-**Optional integration:**
-
-- `decodelabs/monarch` (optional)
-
-  Remnant detects Monarch at runtime (if installed) and uses it to prettify file
-  paths (project root, package aliases, etc.). Composer declares a conflict with
-  `decodelabs/monarch` versions `<0.2` to avoid known-incompatible releases.
-
-### 4.2 External Dependencies
-
-Remnant is designed to be **dependency-free** except for PHP itself, with optional graceful integration with Monarch for enhanced path formatting.
-
----
-
-## 5. Behaviour & Contracts
-
-### 5.1 Invariants
-
-- `Trace::create()` **always returns a `Trace`** containing at least one frame (throws `OutOfBoundsException` if the stack is empty after anchoring).
-- `Trace` objects are **immutable** after construction (frames array is readonly, `ArrayAccess` write operations throw `BadMethodCallException`).
-- `Frame` objects are **immutable value objects** (all properties are readonly).
-- JSON serialization **always includes** the `"schema": "remnant.trace@1"` field.
-- String rendering **never dumps deep values** (arrays show count, objects show class name, strings are truncated).
-- Sensitive values are **redacted by default** (password, secret, secretKey, token) unless custom redaction is provided.
-
-### 5.2 Input & Output Contracts
-
-- `Trace::create(?Anchor $anchor, ?ViewOptions $options)` accepts:
-  - `$anchor`: Optional anchor to rewind the trace (defaults to `Rewind(1)` to skip the `Trace::create()` frame itself).
-  - `$options`: Optional view options for rendering.
-
-- `Trace::fromException(Throwable $e, ?Anchor $anchor)` accepts:
-  - `$e`: Any throwable. If it implements `PreparedTraceException`, returns its pre-computed trace.
-  - `$anchor`: Optional anchor to rewind the trace.
-
-- `Trace::fromDebugBacktrace(array $trace, ?Anchor $anchor, ?ViewOptions $options)` accepts:
-  - `$trace`: Raw array from `debug_backtrace()`.
-  - `$anchor`: Optional anchor to rewind the trace.
-  - `$options`: Optional view options.
-
-- String rendering produces **human-readable output** with:
-  - Frame numbers (counted from bottom up).
-  - Visual indicators (`●` project root, `◐` symlinked package, `◒` vendor, `○` internal).
-  - Function names with argument summaries.
-  - Call-site locations (file:line).
-
-- JSON serialization produces **stable schema** with:
-  - `schema` field (`"remnant.trace@1"`).
-  - `frames` array, each containing:
-    - `function`: Function identifier (string or object).
-    - `internal`: Boolean indicating if frame is internal/engine.
-    - `arguments`: Object keyed by argument name (or `arg#N`).
-    - `callSite`: Location where call originated (may be `null`).
-    - `location`: Location where frame executed (may be `null`).
-
----
-
-## 6. Error Handling
-
-### 6.1 Exception Types
-
-Remnant throws standard PHP exceptions:
-
-- `OutOfBoundsException`: When trace creation results in an empty stack (e.g., anchor rewinds past all frames).
-- `BadMethodCallException`: When attempting to modify a trace via `ArrayAccess::offsetSet()` or `offsetUnset()`.
-- `InvalidArgumentException`: When `ViewOptions` receives invalid parameters (e.g., `maxStringLength` out of range).
-
-### 6.2 Error Strategy
-
-Remnant itself does **not** use `decodelabs/exceptional` (it has no dependencies). It throws standard SPL exceptions for error conditions.
-
-Remnant is designed to be used **by** exception handling systems (like `exceptional`) to format exception traces, not to handle errors itself.
-
----
-
-## 7. Configuration & Extensibility
-
-### 7.1 Configuration
-
-Remnant is configured via `ViewOptions`:
-
-- `rootPath`: Project root path for path prettification (auto-detected from Monarch if available).
-- `filters`: Array of `Filter` implementations to exclude frames from output.
-- `argumentFormat`: How arguments are rendered (`Count`, `InlineValues`, or `NamedValues`).
-- `maxStringLength`: Maximum string length before truncation (1-100, default 16).
-- `redact`: Closure or `true` for default redaction (password, secret, secretKey, token).
-- `collapseSingleLineArguments`: Whether to collapse single-argument frames to one line.
-- `absolutePaths`: Whether to include absolute paths in JSON output (default `false`).
-
-### 7.2 Extension Points
-
-Remnant supports extension via:
-
-- **Custom `Filter` implementations**: Filter frames by path, function, class, namespace, or vendor.
-- **Custom `Anchor` implementations**: Rewind traces based on custom criteria (class, function, or offset).
-- **Custom redaction closures**: Control which argument values are redacted.
-
-Built-in filters include:
-
-- `Filter\Vendor`: Hide frames under `vendor/`.
-- `Filter\Paths`: Hide frames matching path prefixes.
-- `Filter\FunctionIdentifier`: Hide specific functions.
-- `Filter\ClassIdentifier`: Hide specific classes.
-- `Filter\NamespaceIdentifier`: Hide specific namespaces.
-
-Built-in anchors include:
-
-- `Anchor\Rewind`: Rewind by fixed number of frames.
-- `Anchor\ClassIdentifier`: Rewind to last frame of a class.
-- `Anchor\FunctionIdentifier`: Rewind to last frame of a function.
-
----
-
-## 8. Interactions with Other Packages
-
-Remnant is designed to be used by other packages:
-
-- **`decodelabs/exceptional`**
-  Uses Remnant to format exception stack traces. Exceptions can implement `PreparedTraceException` to provide pre-computed traces.
-
-- **`decodelabs/monarch`** (optional)
-  Remnant detects Monarch at runtime and uses it for path prettification. If Monarch is not available, Remnant falls back to basic path formatting.
-
-Design assumptions:
-
-- Remnant is available early in the stack and is considered **safe to use from any layer**.
-- Other packages should not override Remnant's core mechanisms, but may:
-  - implement custom filters and anchors,
-  - provide `PreparedTraceException` implementations,
-  - configure `ViewOptions` for their use cases.
-
----
-
-## 9. Usage Examples
-
-### 9.1 Basic trace creation
-
-```php
-use DecodeLabs\Remnant\Trace;
-
-$trace = Trace::create();
-echo (string)$trace;
-```
-
-### 9.2 Trace from exception
-
-```php
-use DecodeLabs\Remnant\Trace;
-
-try {
-    // ... code that throws ...
-} catch (\Throwable $e) {
-    $trace = Trace::fromException($e);
-    echo (string)$trace;
+class CustomAnchor implements Anchor
+{
+    public function accepts(int $offset, Frame $frame): bool
+    {
+        // Return true when anchor point is reached
+    }
 }
 ```
 
-### 9.3 JSON serialization
+### Custom Filters
+
+Implement the `Filter` interface to create custom filtering logic:
+
+```php
+class CustomFilter implements Filter
+{
+    public function accepts(Frame $frame): bool
+    {
+        // Return false to exclude frame
+    }
+}
+```
+
+### Custom Function Identifiers
+
+Implement the `FunctionIdentifier` interface for custom function identification (rarely needed, existing implementations cover most cases).
+
+### Custom Class Identifiers
+
+Implement the `ClassIdentifier` interface for custom class identification (rarely needed, existing implementations cover most cases).
+
+## Interactions with Other Packages
+
+- **Monarch**: Optional integration for path prettification and root path detection. If available, automatically used for prettifying file paths.
+- **Exceptional**: Remnant traces can be created from exceptions, and `PreparedTraceException` provides pre-computed traces.
+- **Nuance**: Remnant traces can be used alongside Nuance for comprehensive debugging output.
+- **Glitch**: Remnant traces can be integrated with Glitch for enhanced error handling.
+
+## Usage Examples
+
+### Basic Trace Creation
+
+```php
+use DecodeLabs\Remnant\Trace;
+
+// Create trace from current execution
+$trace = Trace::create();
+echo $trace;
+
+// Create trace from exception
+try {
+    // ...
+} catch (\Exception $e) {
+    $trace = Trace::fromException($e);
+    echo $trace;
+}
+```
+
+### Custom View Options
+
+```php
+use DecodeLabs\Remnant\ArgumentFormat;
+use DecodeLabs\Remnant\ViewOptions;
+
+$options = new ViewOptions(
+    rootPath: '/path/to/project',
+    argumentFormat: ArgumentFormat::NamedValues,
+    maxStringLength: 32,
+    redact: fn (string $key, mixed $value) => $key === 'password',
+    absolutePaths: false
+);
+
+$trace = Trace::create(options: $options);
+echo $trace;
+```
+
+### Using Anchors
+
+```php
+use DecodeLabs\Remnant\Anchor\Rewind;
+use DecodeLabs\Remnant\Anchor\ClassIdentifier;
+use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod;
+use DecodeLabs\Remnant\Trace;
+
+// Rewind by number of frames
+$trace = Trace::create(new Rewind(2));
+
+// Rewind to specific function
+$trace = Trace::create(
+    new Anchor\FunctionIdentifier(
+        new ObjectMethod(MyClass::class, 'myMethod')
+    )
+);
+
+// Rewind to specific class
+$trace = Trace::create(
+    new ClassIdentifier(MyClass::class)
+);
+```
+
+### Using Filters
+
+```php
+use DecodeLabs\Remnant\Filter;
+use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod;
+use DecodeLabs\Remnant\Trace;
+use DecodeLabs\Remnant\ViewOptions;
+
+$options = new ViewOptions(
+    filters: [
+        new Filter\Vendor(),
+        new Filter\Paths(['/path/to/filter/']),
+        new Filter\FunctionIdentifier(
+            new ObjectMethod(SomeClass::class, 'someMethod')
+        ),
+        new Filter\ClassIdentifier(SomeClass::class),
+        new Filter\NamespaceIdentifier('Some\\Namespace'),
+    ]
+);
+
+$trace = Trace::create(options: $options);
+echo $trace;
+```
+
+### Accessing Frames
+
+```php
+use DecodeLabs\Remnant\Trace;
+
+$trace = Trace::create();
+
+// Iterate frames
+foreach ($trace as $frame) {
+    echo $frame->function . ' at ' . $frame->location . PHP_EOL;
+}
+
+// Access by index
+$firstFrame = $trace[0];
+$secondFrame = $trace->getFrame(1);
+
+// Check frame matches
+if ($firstFrame->matches($someFunctionIdentifier)) {
+    // ...
+}
+```
+
+### JSON Output
 
 ```php
 use DecodeLabs\Remnant\Trace;
 
 $trace = Trace::create();
 $json = json_encode($trace, JSON_PRETTY_PRINT);
-// Produces: {"schema": "remnant.trace@1", "frames": [...]}
+
+// Schema: "remnant.trace@1"
+// Includes: frames array with function, internal, arguments, callSite, location
 ```
 
-### 9.4 Custom view options
+## Implementation Notes (for Contributors)
 
-```php
-use DecodeLabs\Remnant\ArgumentFormat;
-use DecodeLabs\Remnant\Trace;
-use DecodeLabs\Remnant\ViewOptions;
+### Frame Processing
 
-$trace = Trace::create(options: new ViewOptions(
-    rootPath: '/path/to/project',
-    argumentFormat: ArgumentFormat::NamedValues,
-    maxStringLength: 32,
-    redact: fn (string $key, mixed $value) => $key === 'apiKey',
-    absolutePaths: true
-));
-```
+- Frames are processed from `debug_backtrace()` output.
+- Veneer proxy frames are automatically skipped.
+- Call-site information is derived from the previous frame's file/line.
+- Function identifiers are created based on frame type (static method, object method, namespace function, global function, closure).
 
-### 9.5 Filtering frames
+### Argument Resolution
 
-```php
-use DecodeLabs\Remnant\Filter;
-use DecodeLabs\Remnant\Trace;
-use DecodeLabs\Remnant\ViewOptions;
+- Argument names are resolved using reflection when available.
+- Unknown argument names use `arg#N` format.
+- Arguments are stored with resolved names for better JSON output.
 
-$view = new ViewOptions(
-    filters: [
-        new Filter\Vendor(),
-        new Filter\Paths(['/path/to/filter/']),
-    ]
-);
+### Path Prettification
 
-echo Trace::create(options: $view);
-```
+- Paths are normalized to forward slashes.
+- Package detection searches up directory tree for `composer.json`.
+- Monarch integration provides additional prettification if available.
+- Eval'd code paths are parsed to extract eval line information.
 
-### 9.6 Anchoring traces
+### Rendering
 
-```php
-use DecodeLabs\Remnant\Anchor;
-use DecodeLabs\Remnant\FunctionIdentifier\ObjectMethod;
-use DecodeLabs\Remnant\Trace;
+- String rendering uses consistent formatting with visual indicators.
+- Filtered frames are shown as `… N hidden` when consecutive frames are filtered.
+- Frame numbers are zero-padded for alignment.
+- Argument formatting respects `ArgumentFormat` and `collapseSingleLineArguments` settings.
 
-// Rewind to skip frames up to a specific method
-$trace = Trace::create(
-    new Anchor\FunctionIdentifier(
-        new ObjectMethod(MyClass::class, 'myMethod')
-    )
-);
-```
+### JSON Schema
 
-### 9.7 Accessing frames
+- Schema version is `"remnant.trace@1"`.
+- All value objects implement `JsonSerializableWithOptions` for consistent serialization.
+- Absolute paths are opt-in via `ViewOptions`.
+- Schema is stable across versions for tool consumption.
 
-```php
-use DecodeLabs\Remnant\Trace;
+## Testing & Quality
 
-$trace = Trace::create();
+**Current Status:**
+- Code quality: 5/5
+- README quality: 5/5
+- Documentation: 0/5 (no formal docs yet)
+- Tests: 0/5 (no test suite yet)
 
-foreach ($trace as $frame) {
-    echo $frame->function->name . ' at ' . $frame->location . PHP_EOL;
-}
+**Testing Considerations:**
+- Trace creation should be tested for:
+  - Current execution traces
+  - Exception traces
+  - Debug backtrace array conversion
+  - Anchor rewinding behavior
+  - Empty trace handling
 
-$firstFrame = $trace[0];
-echo (string)$firstFrame;
-```
+- Frame processing should be tested for:
+  - Various function types (static, object, namespace, global, closure)
+  - Anonymous class handling
+  - Argument name resolution
+  - Call-site extraction
+  - Location parsing
 
----
+- ViewOptions should be tested for:
+  - Filter application
+  - Argument formatting
+  - Path prettification
+  - Redaction rules
+  - Edge cases (empty filters, null values, etc.)
 
-## 10. Implementation Notes (For Contributors)
+- Rendering should be tested for:
+  - String output formatting
+  - JSON schema compliance
+  - Visual indicators
+  - Filtered frame display
+  - Edge cases (empty traces, single frames, etc.)
 
-### 10.1 Internal Architecture
+## Roadmap & Future Ideas
 
-At a high level, Remnant:
+- **Performance profiling**: Integration with execution timing data
+- **Source code context**: Include source code snippets in traces
+- **Variable inspection**: Enhanced variable value inspection (with privacy controls)
+- **Trace comparison**: Utilities for comparing traces
+- **IDE integration**: Better integration with IDEs and debugging tools
+- **Trace serialization**: More efficient serialization formats
+- **Trace storage**: Utilities for storing and retrieving traces
+- **Trace analysis**: Tools for analyzing trace patterns
 
-- **Parses `debug_backtrace()` arrays** into structured `Frame` objects.
-- **Identifies functions and classes** using reflection where available, falling back to string parsing.
-- **Renders arguments safely** by:
-  - Using reflection to map positional arguments to parameter names.
-  - Truncating strings, showing array counts, and displaying object class names.
-  - Applying redaction rules before rendering.
-- **Prettifies paths** by:
-  - Detecting Monarch at runtime (if available).
-  - Using project root to distinguish project vs vendor vs package paths.
-  - Generating package aliases (`@pkg:name`) for symlinked packages.
-- **Filters frames** before rendering based on `ViewOptions` filters.
+## References
 
-Key implementation details:
-
-- `Trace` wraps frames in a readonly array and provides array-like access.
-- `Frame` uses `FunctionIdentifier` and `ClassIdentifier` interfaces to abstract different function/class types.
-- `Location` handles eval'd code detection and path normalization.
-- `ArgumentList` uses reflection to map arguments to parameter names when available.
-
-### 10.2 Performance Considerations
-
-- Reflection is used **lazily** (only when needed for argument name mapping or function identification).
-- Path prettification checks for Monarch **at runtime** (no hard dependency).
-- Filtering happens **during rendering**, not during trace creation (filters can be applied multiple times with different `ViewOptions`).
-- JSON serialization is **efficient** (no deep copying, direct array mapping).
-
-### 10.3 Gotchas & Historical Decisions
-
-- **Veneer proxy frames** are automatically skipped (frames from `Veneer/ProxyTrait.php` are filtered out).
-- **Eval'd code** is detected via path pattern matching and tracked separately (`evalLine` field).
-- **Anonymous classes** are identified via `class@anonymous` prefix and parsed to extract defining file/line.
-- **Closures** include their defining file/line in their identifier.
-- **Call-site vs location**: `callSite` is where the call originated, `location` is where the frame executed (may differ for closures/eval).
-
----
-
-## 11. Testing & Quality
-
-### 11.1 Testing Strategy
-
-Tests should cover:
-
-- Trace creation from `debug_backtrace()`, exceptions, and current stack.
-- Frame parsing for different function types (methods, closures, global functions, etc.).
-- Argument rendering with different formats (`Count`, `InlineValues`, `NamedValues`).
-- Path prettification with and without Monarch.
-- Filter application (vendor, paths, identifiers).
-- Anchor rewinding (offset, class, function).
-- JSON serialization schema compliance.
-- Redaction rules (default and custom).
-- Edge cases (empty traces, missing file/line, eval'd code, anonymous classes).
-
-### 11.2 Quality Signals
-
-From the Decode Labs package index (at time of writing):
-
-- **Code:** 5
-- **Readme:** 5
-- **Docs:** 0
-- **Tests:** 0
-
-Remnant is a **high-quality, dependency-free utility** that should be treated as a stable foundation for trace formatting across the Decode Labs ecosystem.
-
----
-
-## 12. Roadmap & Future Ideas
-
-Non-binding ideas:
-
-- Additional filter types (e.g., regex-based path matching, custom predicate filters).
-- Enhanced path prettification (e.g., source map support for compiled code).
-- Performance optimizations for large traces (e.g., lazy frame parsing).
-- Integration with observability tools (e.g., OpenTelemetry trace export).
-- Additional argument format options (e.g., structured object summaries).
-
----
-
-## 13. References
-
-- **Chorus docs:**
-  - Architecture principles
-  - Package taxonomy & clusters
-  - Backwards compatibility strategy (once published)
-
-- **Related packages:**
-  - `decodelabs/exceptional` (uses Remnant for trace formatting)
-  - `decodelabs/monarch` (optional integration for path prettification)
-
-- **Repository:**
-  - `https://github.com/decodelabs/remnant`
-
+- Package repository: https://github.com/decodelabs/remnant
+- Composer package: https://packagist.org/packages/decodelabs/remnant
+- Related packages:
+  - `decodelabs/monarch` — Path management (optional, for prettification)
+  - `decodelabs/exceptional` — Exception handling (can create traces from exceptions)
+  - `decodelabs/nuance` — Debugging and inspection (complementary)
+  - `decodelabs/glitch` — Error handling (can integrate traces)
