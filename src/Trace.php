@@ -129,6 +129,7 @@ class Trace implements
             $last = $frameArray;
 
             if (!$anchorFound) {
+                // @phpstan-ignore-next-line
                 if ($anchor?->accepts($index, $frame)) {
                     $anchorFound = true;
                 } else {

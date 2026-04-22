@@ -96,6 +96,7 @@ class ArgumentList implements
         $options ??= new ViewOptions();
 
         foreach ($this->values as $value) {
+            // @phpstan-ignore-next-line
             $output[] = $this->exportValue($value, $options);
         }
 
