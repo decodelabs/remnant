@@ -162,7 +162,7 @@ class Frame implements
                 $function
             ),
             NamespaceFunction::class => new NamespaceFunction(
-                $namespace ?? throw new UnexpectedValueException('Namespace is required for namespace function'),
+                $namespace,
                 $function
             ),
             GlobalFunction::class => new GlobalFunction($function),
